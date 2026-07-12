@@ -24,6 +24,7 @@ class AppConfig:
 
     STORAGE_TYPE = os.environ.get("STORAGE_TYPE", "json").lower()
     JSON_STORAGE_PATH = os.environ.get("JSON_STORAGE_PATH", "data/properties.jsonl")
+    ENABLE_VISUAL_VERIFICATION = os.environ.get("ENABLE_VISUAL_VERIFICATION", "False").lower() == "true"
     ENGINE_MAX_WORKERS = int(os.environ.get("ENGINE_MAX_WORKERS", "3"))
     BROWSER_HEADLESS = os.environ.get("BROWSER_HEADLESS", "True").lower() == "true"
     BROWSER_REUSE_INSTANCE = os.environ.get("BROWSER_REUSE_INSTANCE", "True").lower() == "true"

@@ -19,7 +19,19 @@ class BrowserPool:
             logging.info(f"[{threading.current_thread().name}] Initializing new ChromiumPage...")
             opts = ChromiumOptions()
             opts.headless(AppConfig.BROWSER_HEADLESS)
-            self._local.browser = ChromiumPage(opts)
+            page = ChromiumPage(opts)
+            if not AppConfig.BROWSER_HEADLESS:
+                try:
+                    import ctypes
+                    user32 = ctypes.windll.user32
+                    width = user32.GetSystemMetrics(0)
+                    height = user32.GetSystemMetrics(1)
+                    page.set.window.size(width, height)
+                    page.set.window.location(0, 0)
+                except Exception as e:
+                    logging.warning(f"Failed to set window size: {e}")
+                    page.set.window.max()
+            self._local.browser = page
             
         return self._local.browser
 

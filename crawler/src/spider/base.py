@@ -5,8 +5,9 @@ class BaseSpider(ABC):
     Base Spider class. Each Spider represents a single Task that handles
     the entire crawling process for a specific platform sequentially.
     """
-    def __init__(self, config):
+    def __init__(self, config, visualizer=None):
         self.config = config
+        self.visualizer = visualizer
 
     @property
     @abstractmethod

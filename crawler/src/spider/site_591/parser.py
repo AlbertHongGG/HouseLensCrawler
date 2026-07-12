@@ -1,13 +1,12 @@
 import re
 import uuid
-from typing import Optional
-from DrissionPage import ChromiumPage
+from typing import Optional, Dict, Any
 from ...models.property import StandardProperty
 
 class Spider591Parser:
     """
-    負責解構 591 網頁 DOM 結構的解析器。
-    確保所有的字串處理、正則提取、標籤尋找邏輯集中於此，提高維護性。
+    負責解構 591 元素字典的解析器 (Parser 層)。
+    符合單一職責原則：不依賴任何 DOM 導航邏輯與瀏覽器物件，純粹將傳入的 Element 萃取出純文字，並進行清洗與轉型。
     """
     
     def __init__(self, platform_name: str = "591"):
@@ -28,82 +27,67 @@ class Spider591Parser:
                 return None
         return None
 
-    def _get_value(self, tab: ChromiumPage, label: str) -> str:
+    def _clean_text(self, ele: Optional[Any], label: str = "") -> str:
         """
-        [工具] 透過尋找標籤文字，取得其母元素的完整文字，再過濾掉標籤本身。
-        這種作法可以無視 591 隨機將數值放在標籤上方、下方或右側相鄰元素的排版變動。
+        [工具] 從傳入的元素提取純文字，並剔除標籤與冒號雜訊。
         """
-        try:
-            # 使用精準的 xpath 找到包含 label 的最深層元素
-            ele = tab.ele(f'xpath://*[text()="{label}"]', timeout=0.5)
-            if not ele:
-                # 容錯：有時可能帶有空白
-                ele = tab.ele(f'xpath://*[contains(text(), "{label}")]', timeout=0.5)
-                
-            if ele:
-                parent = ele.parent()
-                if parent:
-                    # 取得 parent 全文，並剔除 label 與冒號等雜訊
-                    raw_text = parent.text
-                    val = raw_text.replace(label, '').replace('：', '').replace(':', '').strip()
-                    # 避免抓到外層大區塊導致字串過長
-                    if len(val) < 100:
-                        return val
-        except Exception:
-            pass
+        if not ele:
+            return ""
+            
+        raw_text = ele.text
+        if label:
+            val = raw_text.replace(label, '').replace('：', '').replace(':', '').strip()
+        else:
+            val = raw_text.strip()
+            
+        # 避免抓到外層大區塊導致字串過長
+        if len(val) < 100:
+            return val
         return ""
 
-    def parse_detail_page(self, tab: ChromiumPage, url: str, source_id: str) -> StandardProperty:
+    def parse(self, elements: Dict[str, Any], url: str, source_id: str) -> StandardProperty:
         """
-        [解析核心] 從 591 物件詳細頁中提取資訊並對應到 StandardProperty。
+        [解析核心] 接收 Locator 整理好的元素字典，提取資訊並對應到 StandardProperty。
         """
-        tab.wait.eles_loaded('xpath://h1', timeout=5)
-        
         # [1] 基本屬性：標題、總價、單價
-        title_ele = tab.ele('xpath://h1', timeout=1)
-        title = title_ele.text if title_ele else f"591物件 {source_id}"
-
-        price_ele = tab.ele('xpath://*[contains(@class, "price")]', timeout=1)
-        total_price_str = price_ele.text if price_ele else "0"
-        total_price = self._extract_float(total_price_str) or 0.0
-
-        unit_price_ele = tab.ele('xpath://*[contains(text(), "萬/坪")]', timeout=1)
-        unit_price = self._extract_float(unit_price_ele.text) if unit_price_ele else 0.0
+        title = self._clean_text(elements.get('title')) or f"591物件 {source_id}"
+        total_price = self._extract_float(self._clean_text(elements.get('total_price'))) or 0.0
+        unit_price = self._extract_float(self._clean_text(elements.get('unit_price'))) or 0.0
 
         # [2] 結構屬性：格局、屋齡、權狀坪數、樓層
-        layout = self._get_value(tab, '格局')
-        age = self._extract_float(self._get_value(tab, '屋齡')) or 0.0
-        building_ping = self._extract_float(self._get_value(tab, '權狀坪數')) or 0.0
+        layout = self._clean_text(elements.get('layout'), '格局')
+        age = self._extract_float(self._clean_text(elements.get('age'), '屋齡')) or 0.0
+        building_ping = self._extract_float(self._clean_text(elements.get('building_ping'), '權狀坪數')) or 0.0
         
         floor = ""
         total_floor = ""
-        floor_text = self._get_value(tab, '樓層')
+        floor_text = self._clean_text(elements.get('floor_info'), '樓層')
         if '/' in floor_text:
             floor, total_floor = floor_text.split('/', 1)
         else:
             floor = floor_text
 
         # [3] 地理與社群：地址、社區名稱
-        address = self._get_value(tab, '地址')
-        community_name = self._get_value(tab, '社區')
+        address = self._clean_text(elements.get('address'), '地址')
+        community_name = self._clean_text(elements.get('community_name'), '社區')
 
         # [4] 詳細資訊區塊：型態、車位、坪數細節
-        raw_building_type = self._get_value(tab, "型態")
-        management_fee = self._get_value(tab, "管理費")
+        raw_building_type = self._clean_text(elements.get('raw_building_type'), '型態')
+        management_fee = self._clean_text(elements.get('management_fee'), '管理費')
         
-        has_tenant_str = self._get_value(tab, "帶租約")
+        has_tenant_str = self._clean_text(elements.get('has_tenant'), '帶租約')
         has_tenant = "是" in has_tenant_str if has_tenant_str else None
         
-        legal_usage = self._get_value(tab, "法定用途")
+        legal_usage = self._clean_text(elements.get('legal_usage'), '法定用途')
         
-        parking_str = self._get_value(tab, "車位")
+        parking_str = self._clean_text(elements.get('parking_info'), '車位')
         has_parking = "無" not in parking_str if parking_str else None
         parking_ping = self._extract_float(parking_str) if has_parking else None
 
-        main_ping = self._extract_float(self._get_value(tab, "主建物"))
-        accessory_ping = self._extract_float(self._get_value(tab, "附屬建物"))
-        shared_ping = self._extract_float(self._get_value(tab, "共用部分"))
-        land_ping = self._extract_float(self._get_value(tab, "土地坪數"))
+        main_ping = self._extract_float(self._clean_text(elements.get('main_building_ping'), '主建物'))
+        accessory_ping = self._extract_float(self._clean_text(elements.get('accessory_ping'), '附屬建物'))
+        shared_ping = self._extract_float(self._clean_text(elements.get('shared_ping'), '共用部分'))
+        land_ping = self._extract_float(self._clean_text(elements.get('land_ping'), '土地坪數'))
 
         # [5] 組裝與映射：產生標準物件
         return StandardProperty(

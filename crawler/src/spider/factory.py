@@ -32,8 +32,16 @@ class SpiderFactory:
         # Build spider-specific configuration dynamically
         config = SpiderConfig(platform_name)
         
+        # Instantiate Visualizer if enabled
+        from ..config import AppConfig
+        visualizer = None
+        if AppConfig.ENABLE_VISUAL_VERIFICATION:
+            from ..engine.visualizer import VisualVerificationService
+            visualizer = VisualVerificationService(output_dir="data")
+            logging.info(f"Visual Verification is ENABLED for {platform_name}")
+        
         logging.info(f"Instantiating spider: {platform_name} (Max Items: {config.max_items})")
-        return spider_cls(config=config, **kwargs)
+        return spider_cls(config=config, visualizer=visualizer, **kwargs)
 
 # Auto-discover and import all modules in the spider package at load time
 # This ensures decorators are triggered without placing imports inside functions

@@ -3,8 +3,10 @@ import time
 import logging
 
 from ..base import BaseSpider
-from .parser import Spider591Parser
+from ...models.property import StandardProperty
 from .navigator import Spider591Navigator
+from .locator import Spider591Locator
+from .parser import Spider591Parser
 from ...storage.factory import StorageFactory
 from ...engine.state import global_state
 from ...engine.browser_pool import browser_pool
@@ -16,9 +18,10 @@ class Spider591(BaseSpider):
     此設計符合單一職責原則 (SRP)，使得主程式碼維持乾淨與高擴充性。
     """
 
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config, visualizer=None):
+        super().__init__(config, visualizer)
         self.navigator = Spider591Navigator(self.platform_name)
+        self.locator = Spider591Locator()
         self.parser = Spider591Parser(self.platform_name)
 
     @property
@@ -79,8 +82,18 @@ class Spider591(BaseSpider):
                 # [開啟新分頁] 避免在同一個頁面反覆跳轉，這會導致 JS 崩潰與記憶體洩漏
                 detail_tab = browser.new_tab(url)
                 try:
-                    # 交由 Parser 進行資料解析
-                    prop = self.parser.parse_detail_page(detail_tab, url, source_id)
+                    # [1] 尋找所有 DOM 元素 (Locator 層)
+                    elements_dict = self.locator.locate(detail_tab)
+                    
+                    # [2] 視覺化標記與截圖 (Visualizer 層)
+                    if self.visualizer:
+                        self.visualizer.highlight_all(elements_dict)
+                        self.visualizer.save_screenshot(detail_tab, self.platform_name, f"{source_id}.png")
+                    
+                    # [3] 資料清洗與解析 (Parser 層)
+                    prop = self.parser.parse(elements_dict, url, source_id)
+                    
+                    # [4] 儲存
                     storage.save(prop)
                     logging.info(f"[{self.platform_name}] Saved detail {source_id}.")
                 except Exception as e:
