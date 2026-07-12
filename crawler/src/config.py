@@ -13,6 +13,7 @@ class SpiderConfig:
         prefix = f"SPIDER_{platform_name.upper()}"
         self.max_items = int(os.environ.get(f"{prefix}_MAX_ITEMS", "1000"))
         self.max_pages = int(os.environ.get(f"{prefix}_MAX_PAGES", "10"))
+        self.start_url = os.environ.get(f"{prefix}_START_URL", "")
 
 class AppConfig:
     """
