@@ -7,9 +7,9 @@ from ...models.property import StandardProperty
 from .navigator import Spider591Navigator
 from .locator import Spider591Locator
 from .parser import Spider591Parser
-from ...storage.factory import StorageFactory
 from ...engine.state import global_state
 from ...engine.browser_pool import browser_pool
+from ...engine.events import event_bus, Event
 
 class Spider591(BaseSpider):
     """
@@ -18,8 +18,8 @@ class Spider591(BaseSpider):
     此設計符合單一職責原則 (SRP)，使得主程式碼維持乾淨與高擴充性。
     """
 
-    def __init__(self, config, visualizer=None):
-        super().__init__(config, visualizer)
+    def __init__(self, config):
+        super().__init__(config)
         self.navigator = Spider591Navigator(self.platform_name)
         self.locator = Spider591Locator()
         self.parser = Spider591Parser(self.platform_name)
@@ -33,9 +33,9 @@ class Spider591(BaseSpider):
         [主流程] 執行完整的 591 爬蟲作業。
         """
         logging.info(f"[{self.platform_name}] Spider starting...")
+        event_bus.emit(Event.SPIDER_STARTED, platform_name=self.platform_name)
         
-        # 1. 取得全域資源
-        storage = StorageFactory.get_storage()
+        # 1. 取得瀏覽器
         browser = browser_pool.get_browser()
         
         # 2. 從設定檔取得起始網址
@@ -49,6 +49,7 @@ class Spider591(BaseSpider):
             return
             
         page = 1
+        items_processed = 0
         while page <= self.config.max_pages:
             # 檢查整體抓取數量上限
             if global_state.reached_limit(self.config.max_items):
@@ -85,17 +86,22 @@ class Spider591(BaseSpider):
                     # [1] 尋找所有 DOM 元素 (Locator 層)
                     elements_dict = self.locator.locate(detail_tab)
                     
-                    # [2] 視覺化標記與截圖 (Visualizer 層)
-                    if self.visualizer:
-                        self.visualizer.highlight_all(elements_dict)
-                        self.visualizer.save_screenshot(detail_tab, self.platform_name, f"{source_id}.png")
+                    # 📣 廣播事件：DOM 定位完成 (Visualizer 外掛會監聽並繪圖)
+                    event_bus.emit(
+                        Event.ELEMENTS_LOCATED,
+                        tab=detail_tab,
+                        elements=elements_dict,
+                        source_id=source_id,
+                        platform_name=self.platform_name
+                    )
                     
-                    # [3] 資料清洗與解析 (Parser 層)
+                    # [2] 資料清洗與解析 (Parser 層)
                     prop = self.parser.parse(elements_dict, url, source_id)
                     
-                    # [4] 儲存
-                    storage.save(prop)
-                    logging.info(f"[{self.platform_name}] Saved detail {source_id}.")
+                    # 📣 廣播事件：資料解析完畢 (Storage 外掛會監聽並存檔)
+                    event_bus.emit(Event.ITEM_PARSED, item=prop)
+                    items_processed += 1
+                    
                 except Exception as e:
                     logging.error(f"[{self.platform_name}] Error parsing detail {source_id}: {e}")
                 finally:
@@ -112,4 +118,5 @@ class Spider591(BaseSpider):
                 
             page += 1
         
-        logging.info(f"[{self.platform_name}] Spider finished.")
+        logging.info(f"[{self.platform_name}] Spider finished. Processed {items_processed} items.")
+        event_bus.emit(Event.SPIDER_FINISHED, platform_name=self.platform_name)

@@ -1,10 +1,26 @@
 from src.config import AppConfig
 from src.spider.factory import SpiderFactory
 from src.engine.manager import CrawlerManager
-
+from src.engine.events import event_bus
+from src.extensions.storage_ext import StorageExtension
+from src.storage.factory import StorageFactory
+from src.extensions.visualizer_ext import VisualVerificationExtension
+    
 def main():
     print("Initializing HouseLens Crawler V2...")
     
+    # 0. Setup Event-Driven Architecture (Extensions)
+    print("Registering Extensions to EventBus...")
+    
+    # Storage Extension (always required)
+    storage_strategy = StorageFactory.get_storage()
+    StorageExtension(storage_strategy).setup(event_bus)
+    
+    # Visualizer Extension (optional)
+    if AppConfig.ENABLE_VISUAL_VERIFICATION:
+        print("Visual Verification Extension Enabled.")
+        VisualVerificationExtension(output_dir="data").setup(event_bus)
+        
     # 1. Read Core Configuration
     max_workers = AppConfig.ENGINE_MAX_WORKERS
     
