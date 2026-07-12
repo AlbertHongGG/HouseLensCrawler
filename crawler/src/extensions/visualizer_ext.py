@@ -36,27 +36,48 @@ class VisualVerificationExtension(BaseExtension):
         js_script = f"""
         let el = this;
         let text = '{label}';
-        if (window.getComputedStyle(el).position === 'static') {{
-            el.style.position = 'relative';
-        }}
-        el.style.border = '3px solid red';
-        el.style.boxSizing = 'border-box';
         
+        // 取得元素的絕對位置與尺寸
+        let rect = el.getBoundingClientRect();
+        let scrollX = window.scrollX || window.pageXOffset;
+        let scrollY = window.scrollY || window.pageYOffset;
+        
+        // 建立透明度遮罩框 (Overlay) - 不直接修改原素，避免破壞排版
+        let overlay = document.createElement('div');
+        overlay.style.position = 'absolute';
+        overlay.style.top = (rect.top + scrollY) + 'px';
+        overlay.style.left = (rect.left + scrollX) + 'px';
+        overlay.style.width = rect.width + 'px';
+        overlay.style.height = rect.height + 'px';
+        overlay.style.backgroundColor = 'rgba(0, 150, 255, 0.15)'; // 淡藍色半透明背景，不遮擋文字
+        overlay.style.border = '2px dashed #0096FF'; // 藍色虛線邊框
+        overlay.style.boxSizing = 'border-box';
+        overlay.style.pointerEvents = 'none'; // 讓滑鼠可以穿透
+        overlay.style.zIndex = '2147483646'; // 極高層級
+        overlay.style.borderRadius = '4px';
+        
+        // 建立標籤 (Label)
         let labelDiv = document.createElement('div');
         labelDiv.innerText = text;
         labelDiv.style.position = 'absolute';
-        labelDiv.style.top = '-20px';
-        labelDiv.style.left = '0';
-        labelDiv.style.background = 'red';
-        labelDiv.style.color = 'white';
-        labelDiv.style.padding = '2px 5px';
+        // 將 Label 放在框框的左上角上方，避免擋住框內的文字
+        labelDiv.style.top = (rect.top + scrollY - 22) + 'px';
+        labelDiv.style.left = (rect.left + scrollX) + 'px';
+        labelDiv.style.backgroundColor = '#0096FF';
+        labelDiv.style.color = '#ffffff';
+        labelDiv.style.padding = '2px 8px';
         labelDiv.style.fontSize = '12px';
         labelDiv.style.fontWeight = 'bold';
-        labelDiv.style.zIndex = '999999';
+        labelDiv.style.fontFamily = 'sans-serif';
+        labelDiv.style.borderRadius = '4px';
+        labelDiv.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)'; // 增加陰影提升質感
+        labelDiv.style.zIndex = '2147483647';
         labelDiv.style.whiteSpace = 'nowrap';
         labelDiv.style.pointerEvents = 'none';
         
-        el.appendChild(labelDiv);
+        // 將元素加到 body 的最外層，徹底解決 overflow: hidden 導致的截斷問題
+        document.body.appendChild(overlay);
+        document.body.appendChild(labelDiv);
         """
         try:
             ele.run_js(js_script)
