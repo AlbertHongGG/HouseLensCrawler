@@ -14,12 +14,13 @@ class Spider591Parser:
 
     def _extract_float(self, text: str) -> Optional[float]:
         """
-        [工具] 從字串中萃取浮點數，去除逗號與雜訊。
+        [工具] 從字串中萃取浮點數，去除逗號、換行與雜訊。
         例如 "1,200.5萬" -> 1200.5
         """
         if not text:
             return None
-        match = re.search(r'[\d\.]+', text.replace(',', ''))
+        clean_str = text.replace(',', '').replace('\n', '').replace(' ', '')
+        match = re.search(r'[\d\.]+', clean_str)
         if match:
             try:
                 return float(match.group())
@@ -36,9 +37,12 @@ class Spider591Parser:
             
         raw_text = ele.text
         if label:
-            val = raw_text.replace(label, '').replace('：', '').replace(':', '').strip()
+            # 針對帶有 label 的欄位，通常是 591 故意安插很多空白和換行
+            # 我們先把字串中的空白、換行清空，再把 label 去除
+            val = raw_text.replace(' ', '').replace('\n', '').replace('：', '').replace(':', '')
+            val = val.replace(label, '').strip()
         else:
-            val = raw_text.strip()
+            val = raw_text.replace('\n', '').strip()
             
         # 避免抓到外層大區塊導致字串過長
         if len(val) < 100:

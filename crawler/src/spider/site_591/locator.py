@@ -9,17 +9,27 @@ class Spider591Locator:
     
     def _get_parent_ele(self, container: Any, label: str) -> Optional[Any]:
         """
-        [工具] 透過標籤文字在特定的 Container 內尋找，回傳其母元素。
+        [工具] 透過標籤文字在特定的 Container 內尋找目標區塊 (Wrapper)。
         """
         if not container:
             return None
         try:
-            # 注意 xpath 開頭為 .// 代表在當前節點下搜尋
-            ele = container.ele(f'xpath:.//*[text()="{label}"]', timeout=0)
-            if not ele:
-                ele = container.ele(f'xpath:.//*[contains(text(), "{label}")]', timeout=0)
-            if ele:
-                return ele.parent()
+            # 591 會插入亂碼標籤 (如 <wk></wk>) 以及空白字元來防爬蟲，導致 XPath text() 失效。
+            # 解法：直接找尋常見的外層 Wrapper，並利用 DrissionPage 的 .text (會自動過濾 HTML) 
+            # 將字串去空白後比對，若符合則整塊 Wrapper 回傳給 Parser 解析。
+            
+            wrappers = container.eles('.detail-house-item', timeout=0)
+            if not wrappers:
+                wrappers = container.eles('.info-floor-left-2', timeout=0)
+            if not wrappers:
+                wrappers = container.eles('.info-addr-content', timeout=0)
+                
+            for wrapper in wrappers:
+                # 把 text 內的空白和換行去掉，避免 "法\n定\n用\n途" 導致比對失敗
+                clean_text = wrapper.text.replace(' ', '').replace('\n', '')
+                if label in clean_text:
+                    return wrapper
+                    
         except Exception:
             pass
         return None

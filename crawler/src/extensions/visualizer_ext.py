@@ -39,14 +39,14 @@ class VisualVerificationExtension(BaseExtension):
         
         // 取得元素的絕對位置與尺寸
         let rect = el.getBoundingClientRect();
-        let scrollX = window.scrollX || window.pageXOffset;
-        let scrollY = window.scrollY || window.pageYOffset;
+        let bodyRect = document.body.getBoundingClientRect();
         
         // 建立透明度遮罩框 (Overlay) - 不直接修改原素，避免破壞排版
         let overlay = document.createElement('div');
         overlay.style.position = 'absolute';
-        overlay.style.top = (rect.top + scrollY) + 'px';
-        overlay.style.left = (rect.left + scrollX) + 'px';
+        // 利用相對於 body 的座標來定位，徹底解決 scrollY 與 margin 造成的偏移問題
+        overlay.style.top = (rect.top - bodyRect.top) + 'px';
+        overlay.style.left = (rect.left - bodyRect.left) + 'px';
         overlay.style.width = rect.width + 'px';
         overlay.style.height = rect.height + 'px';
         overlay.style.backgroundColor = 'rgba(0, 150, 255, 0.15)'; // 淡藍色半透明背景，不遮擋文字
@@ -61,8 +61,8 @@ class VisualVerificationExtension(BaseExtension):
         labelDiv.innerText = text;
         labelDiv.style.position = 'absolute';
         // 將 Label 放在框框的左上角上方，避免擋住框內的文字
-        labelDiv.style.top = (rect.top + scrollY - 22) + 'px';
-        labelDiv.style.left = (rect.left + scrollX) + 'px';
+        labelDiv.style.top = (rect.top - bodyRect.top - 22) + 'px';
+        labelDiv.style.left = (rect.left - bodyRect.left) + 'px';
         labelDiv.style.backgroundColor = '#0096FF';
         labelDiv.style.color = '#ffffff';
         labelDiv.style.padding = '2px 8px';
