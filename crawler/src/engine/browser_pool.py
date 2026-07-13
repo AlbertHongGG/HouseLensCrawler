@@ -1,5 +1,7 @@
 import threading
 import logging
+import os
+import tempfile
 from DrissionPage import ChromiumPage, ChromiumOptions
 from ..config import AppConfig
 
@@ -12,16 +14,28 @@ class BrowserManager:
         self._local = threading.local()
         self._lock = threading.Lock()
         self._active_browsers = []
+        self._port_counter = 9222
 
     def get_browser(self) -> ChromiumPage:
         """
         Retrieves or creates a ChromiumPage for the current thread.
         """
         if not hasattr(self._local, 'browser') or self._local.browser is None:
-            logging.info(f"[{threading.current_thread().name}] Initializing new ChromiumPage...")
+            with self._lock:
+                port = self._port_counter
+                self._port_counter += 1
+                
+            logging.info(f"[{threading.current_thread().name}] Initializing new ChromiumPage on port {port}...")
+            
+            # 使用獨立的 user data path 確保完全隔離的瀏覽器實例
+            user_data_dir = os.path.join(tempfile.gettempdir(), f"drission_data_{port}")
+            
             opts = ChromiumOptions()
             opts.headless(AppConfig.BROWSER_HEADLESS)
             opts.set_load_mode('none')
+            opts.set_local_port(port)
+            opts.set_user_data_path(user_data_dir)
+            
             page = ChromiumPage(opts)
             if not AppConfig.BROWSER_HEADLESS:
                 try:
