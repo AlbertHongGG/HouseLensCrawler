@@ -21,6 +21,7 @@ class BrowserManager:
             logging.info(f"[{threading.current_thread().name}] Initializing new ChromiumPage...")
             opts = ChromiumOptions()
             opts.headless(AppConfig.BROWSER_HEADLESS)
+            opts.set_load_mode('none')
             page = ChromiumPage(opts)
             if not AppConfig.BROWSER_HEADLESS:
                 try:

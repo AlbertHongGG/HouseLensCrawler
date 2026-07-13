@@ -16,11 +16,6 @@ def main():
     # Storage Extension (always required)
     storage_strategy = StorageFactory.get_storage()
     StorageExtension(storage_strategy).setup(event_bus)
-    
-    # Visualizer Extension (optional)
-    if AppConfig.ENABLE_VISUAL_VERIFICATION:
-        logging.info("Visual Verification Extension Enabled.")
-        VisualVerificationExtension(output_dir="data").setup(event_bus)
         
     # 1. Read Core Configuration
     max_workers = AppConfig.ENGINE_MAX_WORKERS
