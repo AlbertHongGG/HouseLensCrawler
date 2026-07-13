@@ -24,7 +24,7 @@ class CrawlerEngine:
     def _setup_signal_handlers(self):
         """Register signal handlers for graceful shutdown on Ctrl+C."""
         def handle_sigint(signum, frame):
-            logging.warning("\n[Engine] Ctrl+C received! Initiating graceful shutdown...")
+            logging.warning("[Engine] Ctrl+C received! Initiating graceful shutdown...")
             self.context.cancel()
             
             # 立即強制關閉所有活躍的瀏覽器，避免殭屍行程
@@ -43,7 +43,10 @@ class CrawlerEngine:
         try:
             spider.run(spider_ctx)
         except Exception as e:
-            logging.error(f"[{spider.platform_name}] Spider failed: {e}", exc_info=True)
+            if spider_ctx.is_cancelled():
+                logging.info(f"[{spider.platform_name}] Spider stopped gracefully due to engine shutdown.")
+            else:
+                logging.error(f"[{spider.platform_name}] Spider failed: {e}", exc_info=True)
         finally:
             if not AppConfig.BROWSER_REUSE_INSTANCE:
                 logging.info(f"[{spider.platform_name}] Closing browser instance (BROWSER_REUSE_INSTANCE=False).")
