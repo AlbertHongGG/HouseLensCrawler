@@ -1,6 +1,6 @@
 from src.config import AppConfig
 from src.spider.factory import SpiderFactory
-from src.engine.manager import CrawlerManager
+from src.engine.manager import CrawlerEngine
 from src.engine.events import event_bus
 from src.extensions.storage_ext import StorageExtension
 from src.storage.factory import StorageFactory
@@ -25,7 +25,7 @@ def main():
     max_workers = AppConfig.ENGINE_MAX_WORKERS
     
     # 2. Init Manager (Task Executor)
-    manager = CrawlerManager(max_workers=max_workers)
+    manager = CrawlerEngine(max_workers=max_workers)
     
     # 3. Load active spiders from .env
     active_platforms = AppConfig.ACTIVE_SPIDERS

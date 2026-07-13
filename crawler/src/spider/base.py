@@ -15,9 +15,9 @@ class BaseSpider(ABC):
         pass
 
     @abstractmethod
-    def run(self):
+    def run(self, context):
         """
         Executes the entire crawling logic for this platform.
-        Handles its own pagination and item loops sequentially.
+        Handles its own pagination and item loops sequentially, and checks context for cancellation.
         """
         pass

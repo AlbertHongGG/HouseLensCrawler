@@ -7,9 +7,9 @@ from ...models.property import StandardProperty
 from .navigator import Spider591Navigator
 from .locator import Spider591Locator
 from .parser import Spider591Parser
-from ...engine.state import global_state
-from ...engine.browser_pool import browser_pool
+from ...engine.browser_pool import browser_manager
 from ...engine.events import event_bus, Event
+from ...engine.context import SpiderContext
 
 class Spider591(BaseSpider):
     """
@@ -28,7 +28,7 @@ class Spider591(BaseSpider):
     def platform_name(self) -> str:
         return "591"
 
-    def run(self):
+    def run(self, context: SpiderContext):
         """
         [主流程] 執行完整的 591 爬蟲作業。
         """
@@ -36,7 +36,7 @@ class Spider591(BaseSpider):
         event_bus.emit(Event.SPIDER_STARTED, platform_name=self.platform_name)
         
         # 1. 取得瀏覽器
-        browser = browser_pool.get_browser()
+        browser = browser_manager.get_browser()
         
         # 2. 從設定檔取得起始網址
         start_url = self.config.start_url
@@ -51,8 +51,13 @@ class Spider591(BaseSpider):
         page = 1
         items_processed = 0
         while page <= self.config.max_pages:
+            # 檢查是否被取消 (Ctrl+C)
+            if context.is_cancelled():
+                logging.warning(f"[{self.platform_name}] Spider cancelled. Stopping pagination.")
+                break
+
             # 檢查整體抓取數量上限
-            if global_state.reached_limit(self.config.max_items):
+            if context.reached_limit():
                 logging.info(f"[{self.platform_name}] Global limit reached ({self.config.max_items}). Stopping.")
                 break
 
@@ -64,7 +69,12 @@ class Spider591(BaseSpider):
 
             # 5. 逐一處理每個網址
             for url in urls_to_fetch:
-                if global_state.reached_limit(self.config.max_items):
+                # 檢查是否被取消
+                if context.is_cancelled():
+                    logging.warning(f"[{self.platform_name}] Spider cancelled. Breaking item loop.")
+                    break
+                    
+                if context.reached_limit():
                     break
                     
                 # [萃取 ID] e.g., .../detail/2/20136417.html
@@ -74,8 +84,8 @@ class Spider591(BaseSpider):
                 source_id = match.group(1)
 
                 # [去重檢查]
-                if not global_state.add_and_check(source_id, self.config.max_items):
-                    logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Duplicate).")
+                if not context.add_and_check(source_id):
+                    logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Duplicate or Limit Reached).")
                     continue
                 
                 logging.info(f"[{self.platform_name}] Opening tab for detail {source_id}...")
@@ -109,7 +119,7 @@ class Spider591(BaseSpider):
                     detail_tab.close()
                     time.sleep(0.5)
 
-            if global_state.reached_limit(self.config.max_items):
+            if context.reached_limit() or context.is_cancelled():
                 break
 
             # 6. 前往下一頁
