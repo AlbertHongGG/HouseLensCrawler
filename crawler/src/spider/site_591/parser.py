@@ -3,7 +3,9 @@ import uuid
 from typing import Optional, Dict, Any
 from ...models.property import StandardProperty
 
-class Spider591Parser:
+from ..interfaces import IParser
+
+class Spider591Parser(IParser):
     """
     負責解構 591 元素字典的解析器 (Parser 層)。
     符合單一職責原則：不依賴任何 DOM 導航邏輯與瀏覽器物件，純粹將傳入的 Element 萃取出純文字，並進行清洗與轉型。
@@ -11,6 +13,11 @@ class Spider591Parser:
     
     def __init__(self, platform_name: str = "591"):
         self.platform_name = platform_name
+
+    def extract_source_id(self, url: str) -> str:
+        """從 URL 擷取 591 的 source_id"""
+        match = re.search(r'detail/\d+/(\d+)\.html', url)
+        return match.group(1) if match else ""
 
     def _extract_float(self, text: str) -> Optional[float]:
         """

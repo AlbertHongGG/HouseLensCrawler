@@ -3,11 +3,15 @@ import logging
 from typing import Dict, Any, Optional
 from ...models.property import StandardProperty, BuildingType
 
-class SpiderYungchingParser:
+from ..interfaces import IParser
+
+class SpiderYungchingParser(IParser):
     """
     負責將 Yungching 網站抓取到的 DOM 元素字串，解析並清洗為 StandardProperty 格式。
     """
-    
+    def extract_source_id(self, url: str) -> str:
+        # e.g. https://buy.yungching.com.tw/house/6763086
+        return url.split('/')[-1].split('?')[0]
     def parse(self, elements: Dict[str, Any], url: str, source_id: str) -> StandardProperty:
         try:
             title = self._clean_text(elements.get('title'))

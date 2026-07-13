@@ -1,15 +1,12 @@
 from typing import Dict, Any, List
 
-class SinyiLocator:
+from ..interfaces import ILocator
+
+class SinyiLocator(ILocator):
     """
     Handles DOM element location for Sinyi.
     Returns DrissionPage elements which can be highlighted or parsed later.
     """
-    
-    def locate_list_items(self, page) -> List[Any]:
-        """Locates all property cards on the list page."""
-        page.wait.eles_loaded('xpath://div[contains(@id, "buyHouseCard_")]', timeout=10)
-        return page.eles('xpath://div[contains(@id, "buyHouseCard_")]')
 
     def locate_detail(self, tab) -> Dict[str, Any]:
         """Locates specific data fields on the detail page."""

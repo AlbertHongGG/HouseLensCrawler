@@ -2,26 +2,14 @@ import logging
 from typing import Dict, Any, List
 from DrissionPage import ChromiumPage
 
-class SpiderYungchingLocator:
-    """
-    負責封裝永慶房屋 (Yungching) 網站的 DOM 元素定位邏輯。
-    """
-    
-    def locate_list_items(self, tab: ChromiumPage) -> List[Any]:
-        """
-        取得列表頁所有的物件項目。
-        """
-        list_container = tab.ele('css:ul.search-result-list.grid')
-        if list_container:
-            return list_container.eles('css:li.search-result-list-item')
-        return []
+from ..interfaces import ILocator
 
-    def get_next_page_btn(self, tab: ChromiumPage) -> Any:
-        """
-        取得下一頁按鈕。
-        """
-        return tab.ele('css:div.paginationNext')
-        
+class SpiderYungchingLocator(ILocator):
+    """
+    負責在 Yungching (永慶房屋) 網頁上尋找並定位所有需要的 DOM 元素 (Locator 層)。
+    """
+
+
     def locate_detail(self, tab: ChromiumPage) -> Dict[str, Any]:
         """
         從 Yungching 單一物件頁面擷取所有需要的欄位 Wrapper (元素)。

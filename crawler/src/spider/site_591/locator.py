@@ -1,7 +1,9 @@
 from typing import Dict, Optional, Any
 from DrissionPage import ChromiumPage
 
-class Spider591Locator:
+from ..interfaces import ILocator
+
+class Spider591Locator(ILocator):
     """
     負責在 591 網頁上尋找並定位所有需要的 DOM 元素 (Locator 層)。
     符合單一職責原則：不涉及任何字串切割、清理或轉型，純粹產出元素字典。
@@ -23,6 +25,8 @@ class Spider591Locator:
                 wrappers = container.eles('.info-floor-left-2', timeout=0)
             if not wrappers:
                 wrappers = container.eles('.info-addr-content', timeout=0)
+            if not wrappers:
+                wrappers = container.eles('.info-box-inner', timeout=0)
                 
             for wrapper in wrappers:
                 # 把 text 內的空白和換行去掉，避免 "法\n定\n用\n途" 導致比對失敗
@@ -34,7 +38,7 @@ class Spider591Locator:
             pass
         return None
 
-    def locate(self, tab: ChromiumPage) -> Dict[str, Any]:
+    def locate_detail(self, tab: ChromiumPage) -> Dict[str, Any]:
         """
         定位詳細頁面的所有目標元素，回傳字典以供 Visualizer 與 Parser 使用。
         """

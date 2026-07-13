@@ -3,7 +3,9 @@ import logging
 from typing import List, Tuple
 from DrissionPage import ChromiumPage
 
-class Spider591Navigator:
+from ..interfaces import INavigator
+
+class Spider591Navigator(INavigator):
     """
     負責在 591 網站上導航、滾動、翻頁以及提取清單 URL 的元件。
     """
@@ -11,12 +13,15 @@ class Spider591Navigator:
     def __init__(self, platform_name: str = "591"):
         self.platform_name = platform_name
 
-    def load_list_page(self, browser: ChromiumPage, url: str) -> bool:
+    def load_list_page(self, browser: ChromiumPage, start_url: str, page: int) -> bool:
         """
         [導航] 進入指定 URL，並處理反爬或 Lazy-loading。
         """
-        logging.info(f"[{self.platform_name}] Loading page: {url}")
-        browser.get(url)
+        if page > 1:
+            return self._go_next_page(browser)
+
+        logging.info(f"[{self.platform_name}] Loading page: {start_url}")
+        browser.get(start_url)
         
         try:
             # 為了確保無頭瀏覽器不被阻擋，此處需滾動頁面觸發 Lazy Load
@@ -56,7 +61,7 @@ class Spider591Navigator:
                     
         return urls_to_fetch
 
-    def go_next_page(self, browser: ChromiumPage) -> bool:
+    def _go_next_page(self, browser: ChromiumPage) -> bool:
         """
         [導航] 尋找下一頁按鈕並點擊。若無法點擊或到達最後一頁則回傳 False。
         """

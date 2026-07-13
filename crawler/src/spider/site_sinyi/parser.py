@@ -2,10 +2,15 @@ import re
 from typing import Dict, Any, Optional
 from ...models.property import StandardProperty
 
-class SinyiParser:
+from ..interfaces import IParser
+
+class SinyiParser(IParser):
     """
     Parses located elements from Sinyi pages into standard PropertyInfo objects.
     """
+    def extract_source_id(self, url: str) -> str:
+        match = re.search(r'/house/([A-Z0-9a-z]+)', url)
+        return match.group(1) if match else ""
     
     def _clean_text(self, ele) -> str:
         if not ele:
