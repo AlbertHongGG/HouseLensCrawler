@@ -16,6 +16,10 @@ def main():
     # Storage Extension (always required)
     storage_strategy = StorageFactory.get_storage()
     StorageExtension(storage_strategy).setup(event_bus)
+    
+    # Visualizer Extension
+    visualizer = VisualVerificationExtension()
+    visualizer.setup(event_bus)
         
     # 1. Read Core Configuration
     max_workers = AppConfig.ENGINE_MAX_WORKERS
