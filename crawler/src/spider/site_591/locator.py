@@ -1,9 +1,9 @@
 from typing import Dict, Optional, Any
 from DrissionPage import ChromiumPage
 
-from ..interfaces import ILocator
+from ..base_components import BaseLocator
 
-class Spider591Locator(ILocator):
+class Spider591Locator(BaseLocator):
     """
     負責在 591 網頁上尋找並定位所有需要的 DOM 元素 (Locator 層)。
     符合單一職責原則：不涉及任何字串切割、清理或轉型，純粹產出元素字典。

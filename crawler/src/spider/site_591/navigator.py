@@ -2,10 +2,9 @@ import time
 import logging
 from typing import List, Tuple
 from DrissionPage import ChromiumPage
+from ..base_components import BaseNavigator
 
-from ..interfaces import INavigator
-
-class Spider591Navigator(INavigator):
+class Spider591Navigator(BaseNavigator):
     """
     負責在 591 網站上導航、滾動、翻頁以及提取清單 URL 的元件。
     """

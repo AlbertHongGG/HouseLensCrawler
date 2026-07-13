@@ -1,8 +1,8 @@
 from typing import Dict, Any, List
 
-from ..interfaces import ILocator
+from ..base_components import BaseLocator
 
-class SinyiLocator(ILocator):
+class SinyiLocator(BaseLocator):
     """
     Handles DOM element location for Sinyi.
     Returns DrissionPage elements which can be highlighted or parsed later.

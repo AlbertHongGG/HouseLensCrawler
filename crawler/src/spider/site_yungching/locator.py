@@ -2,9 +2,9 @@ import logging
 from typing import Dict, Any, List
 from DrissionPage import ChromiumPage
 
-from ..interfaces import ILocator
+from ..base_components import BaseLocator
 
-class SpiderYungchingLocator(ILocator):
+class SpiderYungchingLocator(BaseLocator):
     """
     負責在 Yungching (永慶房屋) 網頁上尋找並定位所有需要的 DOM 元素 (Locator 層)。
     """
@@ -17,13 +17,7 @@ class SpiderYungchingLocator(ILocator):
         elements = {}
         
         # 先嘗試點擊「看詳細基本資訊」展開全部內容
-        try:
-            detail_btn = tab.ele('text:看詳細基本資訊', timeout=1.0)
-            if detail_btn:
-                detail_btn.click()
-                tab.wait(0.5) # 等待展開動畫
-        except Exception:
-            pass
+        self.click_if_exists(tab, 'text:看詳細基本資訊', timeout=1.0)
 
         # 等待主要畫面載入
         tab.wait.eles_loaded('css:div.house-info', timeout=10)

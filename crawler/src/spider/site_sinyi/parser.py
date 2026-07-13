@@ -1,45 +1,26 @@
 import re
 from typing import Dict, Any, Optional
 from ...models.property import StandardProperty
+from ..base_components import BaseParser
 
-from ..interfaces import IParser
-
-class SinyiParser(IParser):
+class SinyiParser(BaseParser):
     """
     Parses located elements from Sinyi pages into standard PropertyInfo objects.
     """
     def extract_source_id(self, url: str) -> str:
         match = re.search(r'/house/([A-Z0-9a-z]+)', url)
         return match.group(1) if match else ""
-    
-    def _clean_text(self, ele) -> str:
-        if not ele:
-            return ""
-        return re.sub(r'[\r\n\t\s]+', ' ', ele.text).strip()
-
-    def _extract_number(self, text: str) -> float:
-        if not text:
-            return 0.0
-        # 移除非數字與小數點的字元
-        cleaned = re.sub(r'[^\d.]', '', text)
-        if not cleaned:
-            return 0.0
-        try:
-            return float(cleaned)
-        except ValueError:
-            return 0.0
 
     def parse(self, elements: Dict[str, Any], url: str, source_id: str) -> Optional[StandardProperty]:
         if 'title' not in elements or 'price' not in elements:
             return None
             
-        title = self._clean_text(elements.get('title'))
+        title = self.clean_text(elements.get('title'))
         # 移除標題結尾可能的雜訊
         if '｜' in title:
             title = title.split('｜')[0].strip()
             
-        price_text = self._clean_text(elements.get('price'))
-        total_price = self._extract_number(price_text)
+        total_price = self.extract_float(self.clean_text(elements.get('price')))
         
         # Address
         address = ""
@@ -84,30 +65,29 @@ class SinyiParser(IParser):
                 next_line = lines[i+1] if i + 1 < len(lines) else ""
                 
                 if "建坪" == line and "單價" not in line:
-                    # 避免抓到 "建坪單價"
                     if "坪" in next_line:
-                        building_ping = self._extract_number(next_line)
+                        building_ping = self.extract_float(next_line)
                 elif line == "建坪單價":
                     if "萬/坪" in next_line:
-                        unit_price = self._extract_number(next_line)
+                        unit_price = self.extract_float(next_line)
                 elif line in ["主建物", "主+附"]:
                     if "坪" in next_line:
-                        main_building_ping = self._extract_number(next_line)
+                        main_building_ping = self.extract_float(next_line)
                 elif line == "共有部份":
                     if "坪" in next_line:
-                        shared_ping = self._extract_number(next_line)
+                        shared_ping = self.extract_float(next_line)
                 elif line == "附屬建物":
                     if "坪" in next_line:
-                        accessory_ping = self._extract_number(next_line)
+                        accessory_ping = self.extract_float(next_line)
                 elif line == "地坪":
                     if "坪" in next_line:
-                        land_ping = self._extract_number(next_line)
+                        land_ping = self.extract_float(next_line)
                 elif line == "陽台":
                     if "坪" in next_line:
-                        balcony_ping = self._extract_number(next_line)
+                        balcony_ping = self.extract_float(next_line)
                 elif line == "雨遮":
                     if "坪" in next_line:
-                        rain_cover_ping = self._extract_number(next_line)
+                        rain_cover_ping = self.extract_float(next_line)
                 elif line == "類型":
                     if next_line and next_line != "--":
                         building_type = next_line
@@ -118,17 +98,16 @@ class SinyiParser(IParser):
                     if "預售" in next_line:
                         age = 0.0
                     else:
-                        age = self._extract_number(next_line)
+                        age = self.parse_age(next_line)
                 elif line == "樓層":
                     if "/" in next_line:
-                        parts = next_line.split('/')
-                        floor = parts[0].replace('樓', '').replace('B', '-').strip()
-                        total_floors = parts[1].replace('樓', '').strip()
+                        f, tf = self.parse_floor(next_line)
+                        floor = f.replace('樓', '').replace('B', '-').strip()
+                        total_floors = tf.replace('樓', '').strip()
                 elif line == "車位":
                     if next_line != "--" and next_line != "無" and next_line:
                         has_parking = True
                         pt = next_line.replace('收合', '').replace('更多', '').strip()
-                        # 處理換行被切斷的 "(車位總價...450萬)"
                         nn_line = lines[i+2] if i + 2 < len(lines) else ""
                         if '萬)' in nn_line or nn_line.endswith(')'):
                             pt += nn_line.replace('收合', '').replace('更多', '').strip()
@@ -140,14 +119,7 @@ class SinyiParser(IParser):
                     if next_line and next_line != "--":
                         orientation = next_line
 
-        rooms, living_rooms, bathrooms = None, None, None
-        if layout:
-            r_match = re.search(r'(\d+)房', layout)
-            if r_match: rooms = int(r_match.group(1))
-            l_match = re.search(r'(\d+)廳', layout)
-            if l_match: living_rooms = int(l_match.group(1))
-            b_match = re.search(r'(\d+)衛', layout)
-            if b_match: bathrooms = int(b_match.group(1))
+        layout_data = self.parse_layout(layout)
 
         if not unit_price:
             unit_price = round(total_price / building_ping, 2) if building_ping else 0.0
@@ -178,9 +150,9 @@ class SinyiParser(IParser):
             age=age,
             floor=str(floor) if floor else "",
             total_floor=str(total_floors) if total_floors else "",
-            rooms=rooms,
-            living_rooms=living_rooms,
-            bathrooms=bathrooms,
+            rooms=layout_data.get('rooms'),
+            living_rooms=layout_data.get('living_rooms'),
+            bathrooms=layout_data.get('bathrooms'),
             management_fee=management_fee or None,
             orientation=orientation or None,
             parking_type=parking_type or None,

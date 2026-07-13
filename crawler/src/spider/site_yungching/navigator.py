@@ -3,31 +3,19 @@ import logging
 from typing import List
 from DrissionPage import ChromiumPage
 
-from ..interfaces import INavigator
+from ..base_components import BaseNavigator
 
-class SpiderYungchingNavigator(INavigator):
+class SpiderYungchingNavigator(BaseNavigator):
     def __init__(self, platform_name: str = "yungching"):
-        self.platform_name = platform_name
+        super().__init__(platform_name)
 
     def load_list_page(self, browser: ChromiumPage, start_url: str, page: int) -> bool:
         list_url = f"{start_url}{page}"
-        logging.info(f"[{self.platform_name}] Loading page: {list_url}")
-        browser.get(list_url)
+        if not self.safe_get(browser, list_url):
+            return False
+            
         time.sleep(3) # Wait for Angular
-        
-        # 簡單判斷是否成功載入 (透過尋找卡片)
-        # 永慶的卡片通常是 .m-list-item 
-        browser.wait.eles_loaded('.m-list-item', timeout=5)
         return True
 
     def extract_item_urls(self, browser: ChromiumPage) -> List[str]:
-        items = browser.eles('.m-list-item', timeout=0)
-        
-        links = []
-        for item in items:
-            a_tag = item.ele('tag:a', timeout=1)
-            if a_tag:
-                href = a_tag.attr('href')
-                if href:
-                    links.append(href)
-        return links
+        return self.wait_and_extract_links(browser, 'css:li.m-list-item')
