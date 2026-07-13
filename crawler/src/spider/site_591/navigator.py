@@ -46,7 +46,8 @@ class Spider591Navigator:
         
         urls_to_fetch = []
         for item in items:
-            a_tag = item.ele('tag:a')
+            # 這裡必須設定 timeout=0，否則遇到沒有 a 標籤的元素會觸發預設 10 秒等待！
+            a_tag = item.ele('tag:a', timeout=0)
             if a_tag:
                 href = a_tag.attr('href')
                 # 排除廣告連結，確保是正常的 sale.591.com.tw 網址

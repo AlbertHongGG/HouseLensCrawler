@@ -12,9 +12,11 @@ class Spider591Locator:
         [工具] 透過標籤文字尋找，回傳其母元素。
         """
         try:
-            ele = tab.ele(f'xpath://*[text()="{label}"]', timeout=0.5)
+            # 使用極短的 timeout，因為在進入此函數前，主結構已經 loaded。
+            # 如果欄位不存在，就不該白白浪費秒數等待。
+            ele = tab.ele(f'xpath://*[text()="{label}"]', timeout=0)
             if not ele:
-                ele = tab.ele(f'xpath://*[contains(text(), "{label}")]', timeout=0.5)
+                ele = tab.ele(f'xpath://*[contains(text(), "{label}")]', timeout=0)
             if ele:
                 return ele.parent()
         except Exception:
@@ -31,9 +33,9 @@ class Spider591Locator:
         elements = {}
         
         # [1] 基本屬性
-        elements['title'] = tab.ele('xpath://h1', timeout=1)
-        elements['total_price'] = tab.ele('xpath://*[contains(@class, "price")]', timeout=1)
-        elements['unit_price'] = tab.ele('xpath://*[contains(text(), "萬/坪")]', timeout=1)
+        elements['title'] = tab.ele('xpath://h1', timeout=0)
+        elements['total_price'] = tab.ele('xpath://*[contains(@class, "price")]', timeout=0)
+        elements['unit_price'] = tab.ele('xpath://*[contains(text(), "萬/坪")]', timeout=0)
         
         # [2] 結構屬性
         elements['layout'] = self._get_parent_ele(tab, '格局')
