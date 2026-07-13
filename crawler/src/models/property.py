@@ -31,7 +31,12 @@ class StandardProperty(BaseModel):
     building_type: BuildingType = Field(default=BuildingType.OTHER, description="建物型態 (標準化分類)")
     raw_building_type: Optional[str] = Field(default=None, description="平台原始提供的建物型態字串")
     
-    layout: str = Field(..., description="格局 (e.g., 3房2廳2衛)")
+    # 格局數量拆分
+    rooms: Optional[int] = Field(default=0, description="房間數量")
+    living_rooms: Optional[int] = Field(default=0, description="客/大廳數量")
+    bathrooms: Optional[int] = Field(default=0, description="衛浴數量")
+    kitchens: Optional[int] = Field(default=0, description="廚房數量")
+    balconies: Optional[int] = Field(default=0, description="陽台數量")
     age: float = Field(..., description="屋齡 (年)")
     floor: str = Field(..., description="樓層 (e.g., 5F, B1)")
     total_floor: str = Field(..., description="總樓層 (e.g., 15F)")
@@ -59,15 +64,10 @@ class StandardProperty(BaseModel):
 
     # ====== 選擇性輔助欄位 (Optional & Extra Info) ======
     community_name: Optional[str] = None        # 社區名稱
-    project_name: Optional[str] = None          # 建案名稱
     builder: Optional[str] = None               # 建商
-    publish_time: Optional[str] = None          # 刊登時間
-    update_time: Optional[str] = None           # 更新時間
     
     management_fee: Optional[str] = Field(default=None, description="管理費 (含單位，e.g. 3600元/月)")
     orientation: Optional[str] = None           # 座向/朝向
-    balcony: Optional[str] = None               # 陽台數量
-    decoration: Optional[str] = None            # 裝潢程度
     latitude: Optional[float] = None            # 緯度
     longitude: Optional[float] = None           # 經度
 

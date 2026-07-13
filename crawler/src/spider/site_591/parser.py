@@ -45,6 +45,29 @@ class Spider591Parser:
             return val
         return ""
 
+    def _parse_layout(self, layout_str: str) -> Dict[str, int]:
+        """
+        [工具] 從 "4房2廳2衛2陽台" 等字串解析出各個房間數量。
+        """
+        result = {'rooms': 0, 'living_rooms': 0, 'bathrooms': 0, 'kitchens': 0, 'balconies': 0}
+        if not layout_str:
+            return result
+            
+        patterns = {
+            'rooms': r'(\d+)\s*房',
+            'living_rooms': r'(\d+)\s*廳',
+            'bathrooms': r'(\d+)\s*衛',
+            'kitchens': r'(\d+)\s*(?:廚|室)', 
+            'balconies': r'(\d+)\s*陽台'
+        }
+        
+        for key, pattern in patterns.items():
+            match = re.search(pattern, layout_str)
+            if match:
+                result[key] = int(match.group(1))
+                
+        return result
+
     def parse(self, elements: Dict[str, Any], url: str, source_id: str) -> StandardProperty:
         """
         [解析核心] 接收 Locator 整理好的元素字典，提取資訊並對應到 StandardProperty。
@@ -55,7 +78,9 @@ class Spider591Parser:
         unit_price = self._extract_float(self._clean_text(elements.get('unit_price'))) or 0.0
 
         # [2] 結構屬性：格局、屋齡、權狀坪數、樓層
-        layout = self._clean_text(elements.get('layout'), '格局')
+        layout_str = self._clean_text(elements.get('layout'), '格局')
+        layout_data = self._parse_layout(layout_str)
+        
         age = self._extract_float(self._clean_text(elements.get('age'), '屋齡')) or 0.0
         building_ping = self._extract_float(self._clean_text(elements.get('building_ping'), '權狀坪數')) or 0.0
         
@@ -70,6 +95,7 @@ class Spider591Parser:
         # [3] 地理與社群：地址、社區名稱
         address = self._clean_text(elements.get('address'), '地址')
         community_name = self._clean_text(elements.get('community_name'), '社區')
+        orientation = self._clean_text(elements.get('orientation'), '朝向')
 
         # [4] 詳細資訊區塊：型態、車位、坪數細節
         raw_building_type = self._clean_text(elements.get('raw_building_type'), '型態')
@@ -79,6 +105,7 @@ class Spider591Parser:
         has_tenant = "是" in has_tenant_str if has_tenant_str else None
         
         legal_usage = self._clean_text(elements.get('legal_usage'), '法定用途')
+        land_zoning = self._clean_text(elements.get('land_zoning'), '使用分區')
         
         parking_str = self._clean_text(elements.get('parking_info'), '車位')
         has_parking = "無" not in parking_str if parking_str else None
@@ -98,7 +125,11 @@ class Spider591Parser:
             total_price=total_price,
             unit_price=unit_price,
             building_ping=building_ping,
-            layout=layout,
+            rooms=layout_data['rooms'],
+            living_rooms=layout_data['living_rooms'],
+            bathrooms=layout_data['bathrooms'],
+            kitchens=layout_data['kitchens'],
+            balconies=layout_data['balconies'],
             age=age,
             floor=floor.strip(),
             total_floor=total_floor.strip(),
@@ -113,7 +144,9 @@ class Spider591Parser:
             parking_type=parking_str,
             parking_ping=parking_ping,
             legal_usage=legal_usage,
+            land_zoning=land_zoning,
             has_tenant=has_tenant,
             community_name=community_name,
-            management_fee=management_fee
+            management_fee=management_fee,
+            orientation=orientation
         )
