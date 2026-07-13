@@ -88,9 +88,60 @@ class VisualVerificationExtension(BaseExtension):
         target_dir = os.path.join(self.output_dir, spider_name)
         os.makedirs(target_dir, exist_ok=True)
         filepath = os.path.join(target_dir, filename)
+        import base64
+        import time
+
+        # ==========================================
+        # 1. 向下捲動以觸發所有 Lazy Load 圖片
+        # ==========================================
         try:
-            logging.info(f"[Visualizer] Capturing full page screenshot to {filepath}...")
-            tab.get_screenshot(path=filepath, full_page=True)
-            logging.info(f"[Visualizer] Screenshot saved: {filename}")
+            height = int(tab.run_js('return document.documentElement.scrollHeight'))
+            # 每次捲動 800px，直到頁尾
+            for i in range(0, height, 800):
+                tab.run_js(f'window.scrollTo(0, {i})')
+                time.sleep(0.05)
+            # 捲動回最上方
+            tab.run_js('window.scrollTo(0, 0)')
+            time.sleep(0.5)
         except Exception as e:
-            logging.error(f"[Visualizer] Failed to take screenshot {filename}: {e}")
+            pass # 忽略捲動錯誤
+
+        # ==========================================
+        # 2. 計算頁面總尺寸與 DPI，避免硬體紋理溢位
+        # ==========================================
+        # 直接截取原始的 scrollWidth 和 scrollHeight，不再自作聰明進行裁切
+        # 這樣就不會切到 Header, Footer 或右側浮動按鈕。
+        # 同時考慮 devicePixelRatio，避免超過 Chrome 的硬體紋理限制 (16384 physical pixels)
+        # 如果超過，則等比例縮小 (scale < 1)
+        clip_js = """
+        let logicalWidth = document.documentElement.scrollWidth;
+        let logicalHeight = document.documentElement.scrollHeight;
+        let dpr = window.devicePixelRatio || 1;
+        let maxLogicalHeight = 16000 / dpr; // 保守抓 16000 實體像素上限
+        
+        let scale = 1.0;
+        if (logicalHeight > maxLogicalHeight) {
+            scale = maxLogicalHeight / logicalHeight;
+        }
+        
+        return {
+            x: 0, 
+            y: 0, 
+            width: logicalWidth, 
+            height: logicalHeight,
+            scale: scale
+        };
+        """
+        
+        try:
+            clip = tab.run_js(clip_js)
+            result = tab.run_cdp('Page.captureScreenshot', 
+                format='png', 
+                captureBeyondViewport=True, 
+                clip=clip
+            )
+            with open(filepath, "wb") as f:
+                f.write(base64.b64decode(result['data']))
+        except Exception as e:
+            # 如果失敗，降級使用內建截圖
+            tab.get_screenshot(path=filepath, full_page=True)

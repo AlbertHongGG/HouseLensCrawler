@@ -22,15 +22,9 @@ class BrowserPool:
             page = ChromiumPage(opts)
             if not AppConfig.BROWSER_HEADLESS:
                 try:
-                    import ctypes
-                    user32 = ctypes.windll.user32
-                    width = user32.GetSystemMetrics(0)
-                    height = user32.GetSystemMetrics(1)
-                    page.set.window.size(width, height)
-                    page.set.window.location(0, 0)
-                except Exception as e:
-                    logging.warning(f"Failed to set window size: {e}")
                     page.set.window.max()
+                except Exception as e:
+                    logging.warning(f"Failed to maximize window: {e}")
             self._local.browser = page
             
         return self._local.browser
