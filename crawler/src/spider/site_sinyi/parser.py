@@ -53,19 +53,25 @@ class SinyiParser:
         # 預設值
         building_ping = 0.0
         main_building_ping = 0.0
+        accessory_ping = 0.0
+        shared_ping = 0.0
+        unit_price = 0.0
+        land_ping = 0.0
+        balcony_ping = 0.0
+        rain_cover_ping = 0.0
         age = 0.0
         floor = ""
         total_floors = ""
         layout = ""
+        building_type = ""
         parking_type = ""
         management_fee = ""
         orientation = ""
         has_parking = False
         
         # 處理基本資料區塊
-        basic_block = elements.get('basic_block')
+        basic_block = elements.get('_basic_block')
         if basic_block:
-            # 取得所有文字並以換行分割
             lines = basic_block.text.split('\n')
             lines = [l.strip() for l in lines if l.strip()]
             
@@ -76,9 +82,30 @@ class SinyiParser:
                     # 避免抓到 "建坪單價"
                     if "坪" in next_line:
                         building_ping = self._extract_number(next_line)
+                elif line == "建坪單價":
+                    if "萬/坪" in next_line:
+                        unit_price = self._extract_number(next_line)
                 elif line in ["主建物", "主+附"]:
                     if "坪" in next_line:
                         main_building_ping = self._extract_number(next_line)
+                elif line == "共有部份":
+                    if "坪" in next_line:
+                        shared_ping = self._extract_number(next_line)
+                elif line == "附屬建物":
+                    if "坪" in next_line:
+                        accessory_ping = self._extract_number(next_line)
+                elif line == "地坪":
+                    if "坪" in next_line:
+                        land_ping = self._extract_number(next_line)
+                elif line == "陽台":
+                    if "坪" in next_line:
+                        balcony_ping = self._extract_number(next_line)
+                elif line == "雨遮":
+                    if "坪" in next_line:
+                        rain_cover_ping = self._extract_number(next_line)
+                elif line == "類型":
+                    if next_line and next_line != "--":
+                        building_type = next_line
                 elif line == "格局":
                     if "房" in next_line or "廳" in next_line:
                         layout = next_line
@@ -95,7 +122,12 @@ class SinyiParser:
                 elif line == "車位":
                     if next_line != "--" and next_line != "無" and next_line:
                         has_parking = True
-                        parking_type = next_line
+                        pt = next_line.replace('收合', '').replace('更多', '').strip()
+                        # 處理換行被切斷的 "(車位總價...450萬)"
+                        nn_line = lines[i+2] if i + 2 < len(lines) else ""
+                        if '萬)' in nn_line or nn_line.endswith(')'):
+                            pt += nn_line.replace('收合', '').replace('更多', '').strip()
+                        parking_type = pt
                 elif line == "警衛管理":
                     if next_line and next_line != "--":
                         management_fee = next_line
@@ -112,6 +144,16 @@ class SinyiParser:
             b_match = re.search(r'(\d+)衛', layout)
             if b_match: bathrooms = int(b_match.group(1))
 
+        if not unit_price:
+            unit_price = round(total_price / building_ping, 2) if building_ping else 0.0
+
+        if not accessory_ping and (balcony_ping > 0 or rain_cover_ping > 0):
+            accessory_ping = round(balcony_ping + rain_cover_ping, 2)
+
+        indoor_ping = None
+        if main_building_ping and accessory_ping:
+            indoor_ping = round(main_building_ping + accessory_ping, 2)
+
         return StandardProperty(
             property_uuid=f"sinyi_{source_id}",
             source_platform="sinyi",
@@ -120,9 +162,14 @@ class SinyiParser:
             title=title,
             address=address,
             total_price=total_price,
-            unit_price=round(total_price / building_ping, 2) if building_ping else 0.0,
+            unit_price=unit_price,
             building_ping=building_ping,
             main_building_ping=main_building_ping,
+            accessory_ping=accessory_ping or None,
+            shared_ping=shared_ping or None,
+            land_ping=land_ping or None,
+            indoor_ping=indoor_ping,
+            raw_building_type=building_type or None,
             age=age,
             floor=str(floor) if floor else "",
             total_floor=str(total_floors) if total_floors else "",
@@ -131,6 +178,6 @@ class SinyiParser:
             bathrooms=bathrooms,
             management_fee=management_fee or None,
             orientation=orientation or None,
-            raw_parking_type=parking_type or None,
+            parking_type=parking_type or None,
             has_parking=has_parking
         )

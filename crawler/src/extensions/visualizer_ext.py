@@ -22,7 +22,7 @@ class VisualVerificationExtension(BaseExtension):
         """事件處理常式：當 Spider 找到元素時，觸發標記與截圖"""
         # 1. 畫框
         for field_name, ele in elements.items():
-            if ele:
+            if ele and not str(field_name).startswith('_'):
                 self.highlight(ele, field_name)
         
         # 2. 截圖
