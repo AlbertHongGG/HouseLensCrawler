@@ -6,18 +6,24 @@ from typing import Optional
 from ..engine.events import event_bus, Event
 from ..engine.context import SpiderContext
 from ..engine.browser_pool import browser_manager
-from .interfaces import INavigator, ILocator, IParser
+from .interfaces import INavigator, ITransformer
+from .core.rules import MappingProfile, RuleEngine
 
 class BaseSpider(ABC):
     """
     Base Spider class implementing the Template Method pattern.
-    It orchestrates the crawling process using Navigator, Locator, and Parser components.
+    It orchestrates the crawling process using Navigator, RuleEngine, and Transformer components.
     """
     def __init__(self, config):
         self.config = config
         self.navigator: Optional[INavigator] = None
-        self.locator: Optional[ILocator] = None
-        self.parser: Optional[IParser] = None
+        self.profile: Optional[MappingProfile] = None
+        self.transformer: Optional[ITransformer] = None
+        
+        # RuleEngine will automatically emit events if we pass a properly bound emitter
+        self.rule_engine = RuleEngine(
+            event_bus_emitter=lambda **kwargs: event_bus.emit(Event.ELEMENTS_LOCATED, **kwargs)
+        )
 
     @property
     @abstractmethod
@@ -30,8 +36,8 @@ class BaseSpider(ABC):
         [Template Method] Executes the crawling pipeline.
         Subclasses MUST NOT override this method.
         """
-        if not self.navigator or not self.locator or not self.parser:
-            logging.error(f"[{self.platform_name}] Spider components (Navigator, Locator, Parser) are not properly initialized!")
+        if not self.navigator or not self.profile or not self.transformer:
+            logging.error(f"[{self.platform_name}] Spider components (Navigator, Profile, Transformer) are not properly initialized!")
             return
 
         logging.info(f"[{self.platform_name}] Spider starting...")
@@ -78,7 +84,7 @@ class BaseSpider(ABC):
                     break
                     
                 # 6. 擷取 source_id 並去重
-                source_id = self.parser.extract_source_id(url)
+                source_id = self.transformer.extract_source_id(url)
                 if not source_id:
                     continue
 
@@ -92,20 +98,17 @@ class BaseSpider(ABC):
                     # [開啟新分頁] 避免在同一個頁面反覆跳轉導致 JS 崩潰與記憶體洩漏
                     detail_tab = browser.new_tab(url)
                     
-                    # [DOM 定位] (Locator 層)
-                    elements_dict = self.locator.locate_detail(detail_tab)
-                    
-                    # 廣播事件：DOM 定位完成 (供 Visualizer 標記)
-                    event_bus.emit(
-                        Event.ELEMENTS_LOCATED,
-                        tab=detail_tab,
-                        elements=elements_dict,
-                        source_id=source_id,
-                        platform_name=self.platform_name
+                    # [資料萃取] (Extractor/RuleEngine 層)
+                    # 執行 MappingProfile，RuleEngine 會在內部自動發送 ELEMENTS_LOCATED 事件
+                    raw_data = self.rule_engine.execute(
+                        self.profile, 
+                        detail_tab, 
+                        source_id, 
+                        self.platform_name
                     )
                     
-                    # [資料解析] (Parser 層)
-                    prop = self.parser.parse(elements_dict, url, source_id)
+                    # [資料轉換] (Transformer 層)
+                    prop = self.transformer.transform(raw_data, url, source_id)
                     
                     if prop:
                         # 廣播事件：資料解析完畢 (供 Storage 存檔)
@@ -113,7 +116,7 @@ class BaseSpider(ABC):
                         items_processed += 1
                         logging.info(f"[{self.platform_name}] Parsed detail {source_id}.")
                     else:
-                        logging.warning(f"[{self.platform_name}] Failed to parse {url}")
+                        logging.warning(f"[{self.platform_name}] Failed to transform {url}")
                         
                 except Exception as e:
                     logging.error(f"[{self.platform_name}] Error processing {source_id}: {e}", exc_info=True)

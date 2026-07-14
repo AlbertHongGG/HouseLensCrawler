@@ -19,17 +19,7 @@ class INavigator(ABC):
         """
         pass
 
-class ILocator(ABC):
-    @abstractmethod
-    def locate_detail(self, tab: ChromiumPage) -> Dict[str, Any]:
-        """
-        定位詳情頁中的各項 DOM 元素。
-        回傳的 Dictionary 的 Key 將會被 Visualizer 用來標記方框的標籤，
-        Value 則為對應的 DrissionPage 元素 (ChromiumElement)。
-        """
-        pass
-
-class IParser(ABC):
+class ITransformer(ABC):
     @abstractmethod
     def extract_source_id(self, url: str) -> str:
         """
@@ -39,9 +29,10 @@ class IParser(ABC):
         pass
 
     @abstractmethod
-    def parse(self, elements: Dict[str, Any], url: str, source_id: str) -> Optional[StandardProperty]:
+    def transform(self, raw_data: Dict[str, Any], url: str, source_id: str) -> Optional[StandardProperty]:
         """
-        將 Locator 取得的 DOM 元素進行清理與轉換，輸出 StandardProperty 物件。
+        將 RuleEngine 萃取出的純資料 (Raw Data) 進行轉換，輸出 StandardProperty 物件。
+        這是一個不依賴瀏覽器的純函數層。
         如果該物件解析失敗或無效，回傳 None。
         """
         pass
