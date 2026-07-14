@@ -9,17 +9,39 @@ class SinyiParkingProcessor(BaseProcessor):
     def process(self, value: Any, context: Optional[Dict[str, Any]] = None) -> Any:
         if not value or not isinstance(value, str):
             return ""
-        # 移除收合、更多等按鈕文字
         val = value.replace('收合', '').replace('更多', '').replace('車位', '').strip()
         return val
 
 def get_sinyi_profile() -> MappingProfile:
-    blocks = [
+    rules = [
+        # Top-level Header Info
+        FieldRule(
+            name="title",
+            selector=XPathSelector('//span[contains(@class, "buy-content-title-name")]', timeout=10),
+            processors=[RemoveSpaces()]
+        ),
+        FieldRule(
+            name="total_price",
+            selector=XPathSelector('//div[contains(@class, "buy-content-title-total-price")]', timeout=2),
+            processors=[ExtractFloat()]
+        ),
+        FieldRule(
+            name="address",
+            selector=XPathSelector('//span[contains(@class, "buy-content-title-address")]', timeout=2),
+            processors=[RemoveSpaces()]
+        ),
+        FieldRule(
+            name="image_urls",
+            selector=XPathSelector('//div[contains(@class, "buy-buy-carousel")]//img | //div[contains(@class, "carousel_carousel-thumbnail")]//img', timeout=2),
+            extract_attr='src',
+            is_list=True
+        ),
+
         # Title Info Block (Top bar with ping, age, layout, floor)
         BlockRule(
             name="title_info_block",
             container_selector=XPathSelector('//div[contains(@class, "buy_buy-content") and .//*[contains(text(), "建坪")]]', timeout=10),
-            fields=[
+            rules=[
                 FieldRule(
                     name="building_ping",
                     selector=LabelSiblingSelector(["建坪"]),
@@ -46,7 +68,7 @@ def get_sinyi_profile() -> MappingProfile:
         BlockRule(
             name="spec_block",
             container_selector=XPathSelector('//div[contains(@class, "buy_buy-content-main") or contains(@class, "buyContentBasicM")]', timeout=10),
-            fields=[
+            rules=[
                 FieldRule(
                     name="unit_price",
                     selector=LabelSiblingSelector(["建坪單價"]),
@@ -111,28 +133,4 @@ def get_sinyi_profile() -> MappingProfile:
         )
     ]
     
-    rules = [
-        # Top-level Header Info (Since they are scattered spans, we can keep them global or use a title block if there's a common container. The old code used global xpath for them)
-        FieldRule(
-            name="title",
-            selector=XPathSelector('//span[contains(@class, "buy-content-title-name")]', timeout=10),
-            processors=[RemoveSpaces()]
-        ),
-        FieldRule(
-            name="total_price",
-            selector=XPathSelector('//div[contains(@class, "buy-content-title-total-price")]', timeout=2),
-            processors=[ExtractFloat()]
-        ),
-        FieldRule(
-            name="address",
-            selector=XPathSelector('//span[contains(@class, "buy-content-title-address")]', timeout=2),
-            processors=[RemoveSpaces()]
-        ),
-        FieldRule(
-            name="image_urls",
-            selector=XPathSelector('//div[contains(@class, "buy-buy-carousel")]//img | //div[contains(@class, "carousel_carousel-thumbnail")]//img', timeout=2),
-            extract_attr='src',
-            is_list=True
-        )
-    ]
-    return MappingProfile(rules=rules, blocks=blocks)
+    return MappingProfile(rules=rules)

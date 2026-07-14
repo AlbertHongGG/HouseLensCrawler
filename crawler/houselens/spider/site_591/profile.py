@@ -3,12 +3,12 @@ from ...spider.core.selectors import CssSelector, XPathSelector, LabelSiblingSel
 from ...spider.core.processors import ExtractFloat, ParseLayout, ParseAge, RemoveSpaces, ExtractAfterString
 
 def get_591_profile() -> MappingProfile:
-    blocks = [
+    rules = [
         # 1. 標題區塊
         BlockRule(
             name="title_block",
             container_selector=CssSelector(".detail-title-container, #detail-title-container-template"),
-            fields=[
+            rules=[
                 FieldRule(
                     name="title",
                     selector=XPathSelector('.//h1', timeout=0),
@@ -21,7 +21,7 @@ def get_591_profile() -> MappingProfile:
         BlockRule(
             name="info_block",
             container_selector=CssSelector("#new-vue-sale-detail-info, .detail-info, .info-box"),
-            fields=[
+            rules=[
                 FieldRule(
                     name="total_price",
                     selector=XPathSelector('.//*[contains(@class, "info-box-price-2")]//*[contains(@class, "price")]', timeout=0),
@@ -63,21 +63,17 @@ def get_591_profile() -> MappingProfile:
                     selector=LabelSiblingSelector(["朝向"], container_css=".info-addr-content")
                 )
             ]
-        )
-    ]
-    
-    # 圖片等其他不屬於特定大區塊的資料，可以放在 global rules
-    rules = [
+        ),
+        
+        # 圖片等其他不屬於特定大區塊的資料
         FieldRule(
             name="image_urls",
             selector=CssSelector('.img-box img, #j_photo_play img, #img_list img'),
             extract_attr='src',
             is_list=True
-        )
-    ]
-    
-    # 3. 房屋資料區塊與 4. 坪數說明區塊，透過 KeyValueRule 處理防爬標籤
-    kv_rules = [
+        ),
+        
+        # 3. 房屋資料區塊，透過 KeyValueRule 處理防爬標籤
         KeyValueRule(
             container_selector=CssSelector(".detail-house-item, .house-info-item"),
             key_selector=CssSelector(".detail-house-key, .house-info-name"),
@@ -90,6 +86,8 @@ def get_591_profile() -> MappingProfile:
                 "車位": "parking_info"
             }
         ),
+        
+        # 4. 坪數說明區塊，透過 KeyValueRule 處理防爬標籤
         KeyValueRule(
             container_selector=CssSelector(".detail-house-item, .house-info-item"),
             key_selector=CssSelector(".detail-house-key, .house-info-name"),
@@ -110,4 +108,4 @@ def get_591_profile() -> MappingProfile:
         )
     ]
     
-    return MappingProfile(rules=rules, blocks=blocks, key_value_rules=kv_rules)
+    return MappingProfile(rules=rules)

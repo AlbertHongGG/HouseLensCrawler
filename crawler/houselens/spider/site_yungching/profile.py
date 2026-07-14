@@ -3,12 +3,12 @@ from ...spider.core.selectors import CssSelector, XPathSelector, LabelSiblingSel
 from ...spider.core.processors import ExtractFloat, ParseLayout, ParseAge, RemoveSpaces, ExtractAfterString
 
 def get_yungching_profile() -> MappingProfile:
-    blocks = [
+    rules = [
         # 1. House Info Block
         BlockRule(
             name="house_info_block",
             container_selector=CssSelector('div.house-info'),
-            fields=[
+            rules=[
                 FieldRule(
                     name="title",
                     selector=CssSelector('.case-name'),
@@ -31,7 +31,7 @@ def get_yungching_profile() -> MappingProfile:
         BlockRule(
             name="basic_detail_block",
             container_selector=CssSelector('div.detail-block.basic'),
-            fields=[
+            rules=[
                 FieldRule(
                     name="layout",
                     selector=LabelSiblingSelector(["建物格局"], container_css=".item")
@@ -118,10 +118,9 @@ def get_yungching_profile() -> MappingProfile:
                     selector=LabelSiblingSelector(["車位"], container_css=".item")
                 )
             ]
-        )
-    ]
-    
-    rules = [
+        ),
+        
+        # global fields
         FieldRule(
             name="image_urls",
             selector=CssSelector('.album-handlers-swiper img, .yc-ng-album img'),
@@ -129,4 +128,4 @@ def get_yungching_profile() -> MappingProfile:
             is_list=True
         )
     ]
-    return MappingProfile(rules=rules, blocks=blocks)
+    return MappingProfile(rules=rules)
