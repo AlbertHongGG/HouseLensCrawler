@@ -7,6 +7,7 @@ from houselens.engine.events import event_bus
 from houselens.extensions.storage_ext import StorageExtension
 from houselens.storage.factory import StorageFactory
 from houselens.extensions.visualizer_ext import VisualVerificationExtension
+from houselens.extensions.duplicate_logger_ext import DuplicateLoggerExtension
     
 def main():
     logging.info("Initializing HouseLens Crawler V2...")
@@ -21,6 +22,9 @@ def main():
     # Visualizer Extension
     visualizer = VisualVerificationExtension()
     visualizer.setup(event_bus)
+    
+    # Duplicate Logger Extension
+    DuplicateLoggerExtension()
         
     # 1. Read Core Configuration
     max_workers = AppConfig.ENGINE_MAX_WORKERS

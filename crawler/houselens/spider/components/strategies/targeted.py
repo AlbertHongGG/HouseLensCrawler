@@ -21,7 +21,7 @@ class TargetedCrawlStrategy(ICrawlStrategy):
             if context.is_cancelled() or context.reached_limit():
                 break
             
-            if spider.process_detail_url(url, browser, context):
+            if spider.process_detail_url(url, browser, context, force_scrape=True):
                 items_processed += 1
                 
         return items_processed

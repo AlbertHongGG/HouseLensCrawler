@@ -9,6 +9,7 @@ if TYPE_CHECKING:
 from ..engine.events import event_bus, Event
 from ..engine.context import SpiderContext
 from ..engine.browser_pool import browser_manager
+from ..engine.dedup import CheckStatus
 from .components.navigators.interface import INavigator
 from .components.transformers.interface import ITransformer
 from .core.rules import MappingProfile, RuleEngine
@@ -57,7 +58,7 @@ class BaseSpider(ABC):
             logging.info(f"[{self.platform_name}] Spider finished. Processed {items_processed} items.")
             event_bus.emit(Event.SPIDER_FINISHED, platform_name=self.platform_name)
 
-    def process_detail_url(self, url: str, browser, context: SpiderContext) -> bool:
+    def process_detail_url(self, url: str, browser, context: SpiderContext, force_scrape: bool = False) -> bool:
         """
         處理單一物件網址，負責擷取、解析、與廣播事件。
         回傳是否成功處理該物件。
@@ -66,9 +67,17 @@ class BaseSpider(ABC):
         if not source_id:
             return False
 
-        if not context.add_and_check(source_id):
-            logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Duplicate or Limit Reached).")
+        status, original_url = context.register_item(source_id, url)
+        if status == CheckStatus.LIMIT_REACHED:
+            logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Limit Reached).")
             return False
+        elif status == CheckStatus.DUPLICATE:
+            if not force_scrape:
+                logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Duplicate).")
+                event_bus.emit(Event.DUPLICATE_DETECTED, platform=self.platform_name, source_id=source_id, url_a=original_url, url_b=url)
+                return False
+            else:
+                logging.info(f"[{self.platform_name}] Detail {source_id} is a duplicate, but force_scrape is True. Proceeding.")
         
         logging.info(f"[{self.platform_name}] Opening tab for detail {source_id}...")
         detail_tab = None
