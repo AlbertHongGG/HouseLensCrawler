@@ -1,5 +1,5 @@
 from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
-from ...spider.core.selectors import CssSelector, XPathSelector
+from ...spider.core.selectors import CssSelector, XPathSelector, MultipleSelector
 from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces, BaseProcessor
 from ...spider.core.post_processors import CalculateIndoorPingProcessor
 from typing import Any, Optional, Dict
@@ -20,17 +20,26 @@ def get_sinyi_profile() -> MappingProfile:
             rules=[
                 FieldRule(
                     name="title",
-                    selector=CssSelector("h1, .buy-content-title-name, .title"),
+                    selector=MultipleSelector([
+                        CssSelector(".buy-content-title-name, .title"),
+                        CssSelector("h1")
+                    ]),
                     processors=[RemoveSpaces()]
                 ),
                 FieldRule(
                     name="total_price",
-                    selector=CssSelector('div[class*="buy_buy-content-title-price-first"], .buy-content-title-total-price, .price'),
+                    selector=MultipleSelector([
+                        CssSelector(".buy-content-title-total-price"),
+                        CssSelector('div[class*="buy_buy-content-title-price-first"], .price')
+                    ]),
                     processors=[ExtractFloat()]
                 ),
                 FieldRule(
                     name="address",
-                    selector=XPathSelector('//div[contains(text(), "地址")] | //span[contains(text(), "地址")] | //*[contains(@class, "address")]'),
+                    selector=MultipleSelector([
+                        XPathSelector('//div[contains(text(), "地址")] | //span[contains(text(), "地址")] | //*[contains(@class, "address")]'),
+                        CssSelector('div[class*="Address"]')
+                    ]),
                     processors=[RemoveSpaces()]
                 )
             ]
@@ -64,8 +73,9 @@ def get_sinyi_profile() -> MappingProfile:
                             key_mapping={
                                 "建坪單價": "unit_price",
                                 "建坪": "building_ping",
+                                "主+附": "indoor_ping",
+                                "主+陽": "indoor_ping",
                                 "主建物": "main_building_ping",
-                                "主+附": "main_building_ping",
                                 "共有部份": "shared_ping",
                                 "附屬建物": "accessory_ping",
                                 "地坪": "land_ping",
@@ -75,9 +85,10 @@ def get_sinyi_profile() -> MappingProfile:
                                 "防空避難室": "parking_ping",
                                 "類型": "raw_building_type",
                                 "停車空間": "parking_ping",
-                                "車位": "parking_type",
                                 "管理費": "management_fee",
+                                "車位": "parking_type",
                                 "建物朝向": "orientation",
+                                "加蓋格局": "_ignore",
                                 "格局": "layout",
                                 "屋齡": "age",
                                 "樓層": "floor_info"

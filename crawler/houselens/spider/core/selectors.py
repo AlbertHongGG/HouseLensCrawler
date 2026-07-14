@@ -92,4 +92,23 @@ class ParentSelector(BaseSelector):
         return parents
 
 
+class MultipleSelector(BaseSelector):
+    """
+    Tries multiple selectors in order, returning the first one that successfully finds an element.
+    """
+    def __init__(self, selectors: List[BaseSelector]):
+        self.selectors = selectors
 
+    def select(self, context: ChromiumElement) -> Optional[ChromiumElement]:
+        for selector in self.selectors:
+            result = selector.select(context)
+            if result:
+                return result
+        return None
+
+    def select_all(self, context: ChromiumElement) -> List[ChromiumElement]:
+        for selector in self.selectors:
+            results = selector.select_all(context)
+            if results:
+                return results
+        return []

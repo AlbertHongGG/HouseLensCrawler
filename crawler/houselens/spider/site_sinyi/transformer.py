@@ -41,9 +41,10 @@ class SpiderSinyiTransformer(ITransformer):
         if not accessory_ping and (balcony_ping > 0 or rain_cover_ping > 0):
             accessory_ping = round(balcony_ping + rain_cover_ping, 2)
 
-        indoor_ping = None
-        if main_building_ping and accessory_ping:
-            indoor_ping = round(main_building_ping + accessory_ping, 2)
+        indoor_ping = raw_data.get('indoor_ping')
+        if not indoor_ping:
+            if main_building_ping and accessory_ping:
+                indoor_ping = round(main_building_ping + accessory_ping, 2)
 
         raw_building_type = str(raw_data.get('raw_building_type') or "").replace('--', '').strip()
         

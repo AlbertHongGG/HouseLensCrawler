@@ -15,14 +15,19 @@ class BasePostProcessor(ABC):
 
 class CalculateIndoorPingProcessor(BasePostProcessor):
     """
-    Calculates indoor_ping by summing main_building_ping and accessory_ping if both exist.
-    Also assigns the visual highlight element to main_building_ping.
+    Calculates indoor_ping by summing main_building_ping, balcony_ping, and rain_cover_ping.
+    It will only calculate if at least balcony or rain_cover exists.
     """
     def process(self, data: Dict[str, Any], elements: Dict[str, ChromiumElement]) -> None:
         if 'indoor_ping' not in data or not data['indoor_ping']:
             mb = data.get('main_building_ping')
-            ab = data.get('accessory_ping')
-            if mb is not None and ab is not None:
-                data['indoor_ping'] = round(mb + ab, 2)
-                if 'main_building_ping' in elements:
-                    elements['indoor_ping'] = elements['main_building_ping']
+            if mb is not None:
+                ab = data.get('accessory_ping')
+                if ab is not None:
+                    data['indoor_ping'] = round(mb + ab, 2)
+                else:
+                    ab1 = data.get('balcony_ping')
+                    ab2 = data.get('rain_cover_ping')
+                    if ab1 is not None or ab2 is not None:
+                        total_ab = (ab1 or 0) + (ab2 or 0)
+                        data['indoor_ping'] = round(mb + total_ab, 2)
