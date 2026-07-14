@@ -16,21 +16,21 @@ def get_sinyi_profile() -> MappingProfile:
         # 1. Header Information Block (Title, Price, Address)
         ContainerRule(
             name="header_block",
-            selector=CssSelector(".buy-content-title, .buy-title, .m-house-detail-header"),
+            selector=CssSelector('div[class*="buy_buy-content-top-bar-title"], .buy-content-title, .buy-title, .m-house-detail-header, body'),
             rules=[
                 FieldRule(
                     name="title",
-                    selector=CssSelector(".buy-content-title-name, h1, .title"),
+                    selector=CssSelector("h1, .buy-content-title-name, .title"),
                     processors=[RemoveSpaces()]
                 ),
                 FieldRule(
                     name="total_price",
-                    selector=CssSelector(".buy-content-title-total-price, .price"),
+                    selector=CssSelector('div[class*="buy_buy-content-title-price-first"], .buy-content-title-total-price, .price'),
                     processors=[ExtractFloat()]
                 ),
                 FieldRule(
                     name="address",
-                    selector=CssSelector(".buy-content-title-address, .address"),
+                    selector=XPathSelector('//div[contains(text(), "地址")] | //span[contains(text(), "地址")] | //*[contains(@class, "address")]'),
                     processors=[RemoveSpaces()]
                 )
             ]
@@ -39,7 +39,7 @@ def get_sinyi_profile() -> MappingProfile:
         # 2. Image Gallery Block
         ContainerRule(
             name="gallery_block",
-            selector=CssSelector(".buy-buy-carousel, .carousel_carousel-thumbnail, .slick-slider"),
+            selector=CssSelector('div[class*="buy_buy-content-carousel"], .buy-buy-carousel, .carousel_carousel-thumbnail, .slick-slider'),
             rules=[
                 FieldRule(
                     name="image_urls",
@@ -50,15 +50,15 @@ def get_sinyi_profile() -> MappingProfile:
             ]
         ),
         
-        # 3. Basic Information Block (Strictly limited to the table to avoid catching header specs)
+        # 3. Basic Information Block
         ContainerRule(
             name="basic_info_block",
-            # We strictly target #basic-data or specific basic table classes.
-            selector=CssSelector("#basic-data, .buy-content-basic, .basic-info-content"),
+            # We target the container #iteminfo or its parent, or fallback to the whole body if not found.
+            selector=CssSelector('div[class*="buy_buy-content-basic"], #basic-data, .buy-content-basic, .basic-info-content'),
             rules=[
                 ListRule(
                     name="basic_info_list",
-                    item_selector=CssSelector(".item, .buy-content-basic-cell, li"),
+                    item_selector=CssSelector('div[class*="buy_buy-content-body-grid"] > div, .item, .buy-content-basic-cell, li, div[class*="buy_buy-content-basic"]'),
                     rules=[
                         BlockKeyValueRule(
                             key_mapping={
@@ -71,14 +71,13 @@ def get_sinyi_profile() -> MappingProfile:
                                 "地坪": "land_ping",
                                 "陽台": "balcony_ping",
                                 "雨遮": "rain_cover_ping",
+                                "防空避難室兼停車場": "parking_ping",
+                                "防空避難室": "parking_ping",
                                 "類型": "raw_building_type",
                                 "停車空間": "parking_ping",
                                 "車位": "parking_type",
-                                "警衛管理": "management_fee",
                                 "管理費": "management_fee",
                                 "建物朝向": "orientation",
-                                "落地窗朝向": "orientation",
-                                "朝向": "orientation",
                                 "格局": "layout",
                                 "屋齡": "age",
                                 "樓層": "floor_info"
