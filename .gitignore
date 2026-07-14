@@ -175,3 +175,5 @@ crawler/data/
 node_modules/
 backend/
 implementation_plan_backend.md
+
+*.txt
