@@ -1,8 +1,8 @@
 import re
 import uuid
-from typing import Optional, Dict, Any
+from typing import Dict, Any, Optional
+from ..components.transformers.interface import ITransformer
 from ...models.property import StandardProperty
-from ..interfaces import ITransformer
 from ...utils.parsers import parse_layout, parse_floor
 
 class SpiderSinyiTransformer(ITransformer):

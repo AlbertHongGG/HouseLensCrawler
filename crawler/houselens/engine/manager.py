@@ -36,12 +36,13 @@ class CrawlerEngine:
         signal.signal(signal.SIGINT, handle_sigint)
         signal.signal(signal.SIGTERM, handle_sigint)
 
-    def _run_spider(self, spider: BaseSpider):
+    def _run_spider(self, task: tuple):
         """Worker thread entry point."""
+        spider, strategy = task
         # 建立專屬的 SpiderContext
         spider_ctx = SpiderContext(self.context, max_items=spider.config.max_items)
         try:
-            spider.run(spider_ctx)
+            spider.run(spider_ctx, strategy)
         except Exception as e:
             if spider_ctx.is_cancelled():
                 logging.info(f"[{spider.platform_name}] Spider stopped gracefully due to engine shutdown.")
@@ -52,9 +53,10 @@ class CrawlerEngine:
                 logging.info(f"[{spider.platform_name}] Closing browser instance (BROWSER_REUSE_INSTANCE=False).")
                 browser_manager.close_current_browser()
 
-    def start(self, spiders: List[BaseSpider]):
+    def start(self, tasks: List[tuple]):
         """
-        Starts the execution of all provided spiders concurrently.
+        Starts the execution of all provided tasks concurrently.
+        Each task is a tuple of (BaseSpider, ICrawlStrategy).
         """
         logging.info("Starting Crawler Engine...")
         
@@ -64,9 +66,10 @@ class CrawlerEngine:
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers)
         
         futures = []
-        for spider in spiders:
-            logging.info(f"[Engine] Submitting Spider: {spider.platform_name}")
-            future = executor.submit(self._run_spider, spider)
+        for task in tasks:
+            spider, strategy = task
+            logging.info(f"[Engine] Submitting Task for Spider: {spider.platform_name}")
+            future = executor.submit(self._run_spider, task)
             futures.append(future)
 
         try:
@@ -94,3 +97,5 @@ class CrawlerEngine:
             executor.shutdown(wait=False, cancel_futures=True)
 
         logging.info("Crawler engine finished all operations.")
+
+

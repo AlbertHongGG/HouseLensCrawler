@@ -2,8 +2,7 @@ import time
 import logging
 from typing import List
 from DrissionPage import ChromiumPage
-
-from ..base_components import BaseNavigator
+from ..components.navigators.base import BaseNavigator
 
 class SinyiNavigator(BaseNavigator):
     def __init__(self, platform_name: str = "sinyi"):

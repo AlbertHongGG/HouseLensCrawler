@@ -2,7 +2,7 @@ import time
 import logging
 from typing import List, Tuple
 from DrissionPage import ChromiumPage
-from ..base_components import BaseNavigator
+from ..components.navigators.base import BaseNavigator
 
 class Spider591Navigator(BaseNavigator):
     """

@@ -1,11 +1,12 @@
 import logging
-from src.config import AppConfig
-from src.spider.factory import SpiderFactory
-from src.engine.manager import CrawlerEngine
-from src.engine.events import event_bus
-from src.extensions.storage_ext import StorageExtension
-from src.storage.factory import StorageFactory
-from src.extensions.visualizer_ext import VisualVerificationExtension
+from houselens.config import AppConfig
+from houselens.spider.factory import SpiderFactory
+from houselens.spider.components.strategies import FullCrawlStrategy, TargetedCrawlStrategy
+from houselens.engine.manager import CrawlerEngine
+from houselens.engine.events import event_bus
+from houselens.extensions.storage_ext import StorageExtension
+from houselens.storage.factory import StorageFactory
+from houselens.extensions.visualizer_ext import VisualVerificationExtension
     
 def main():
     logging.info("Initializing HouseLens Crawler V2...")
@@ -27,25 +28,45 @@ def main():
     # 2. Init Manager (Task Executor)
     manager = CrawlerEngine(max_workers=max_workers)
     
-    # 3. Load active spiders from .env
-    active_platforms = AppConfig.ACTIVE_SPIDERS
-    logging.info(f"Active platforms configured: {active_platforms}")
-    logging.info(f"Engine max workers: {max_workers}")
+    # 3. Read Strategy configuration from .env
+    crawl_mode = AppConfig.CRAWL_MODE
+    logging.info(f"Crawl Mode: {crawl_mode.upper()}")
     
-    spiders = []
-    for platform in active_platforms:
+    tasks = []
+    
+    if crawl_mode == "targeted":
+        target_platform = AppConfig.TARGET_PLATFORM
+        target_urls = AppConfig.TARGET_URLS
+        if not target_platform or not target_urls:
+            logging.error("Target mode requires TARGET_PLATFORM and TARGET_URLS in .env")
+            return
+            
         try:
-            spider = SpiderFactory.create(platform)
-            spiders.append(spider)
+            spider = SpiderFactory.create(target_platform)
+            strategy = TargetedCrawlStrategy(target_urls)
+            tasks.append((spider, strategy))
         except ValueError as e:
-            logging.warning(f"{e}")
+            logging.error(f"Failed to create targeted spider: {e}")
+            return
+            
+    else: # full mode
+        active_platforms = AppConfig.ACTIVE_SPIDERS
+        logging.info(f"Active platforms configured: {active_platforms}")
+        
+        for platform in active_platforms:
+            try:
+                spider = SpiderFactory.create(platform)
+                strategy = FullCrawlStrategy()
+                tasks.append((spider, strategy))
+            except ValueError as e:
+                logging.warning(f"{e}")
 
-    if not spiders:
-        logging.warning("No active spiders found. Exiting.")
+    if not tasks:
+        logging.warning("No active tasks found. Exiting.")
         return
 
-    # 4. Start engine with spiders
-    manager.start(spiders)
+    # 4. Start engine with tasks
+    manager.start(tasks)
     
     logging.info("Crawling finished.")
 

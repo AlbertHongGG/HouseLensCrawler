@@ -2,7 +2,7 @@ import logging
 from typing import List
 from DrissionPage import ChromiumPage
 
-from .interfaces import INavigator
+from .interface import INavigator
 
 class BaseNavigator(INavigator):
     def __init__(self, platform_name: str):
