@@ -15,3 +15,7 @@ class INavigator(ABC):
     def extract_item_urls(self, browser: ChromiumPage) -> List[str]:
         """提取列表頁上的所有物件網址"""
         pass
+
+    def prepare_detail_page(self, detail_tab: ChromiumPage):
+        """(Optional) 在擷取資料前，對物件詳細頁進行預先操作 (例如：點擊展開按鈕)"""
+        pass

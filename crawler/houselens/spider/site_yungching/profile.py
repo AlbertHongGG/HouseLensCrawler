@@ -1,131 +1,94 @@
-from ...spider.core.rules import FieldRule, MappingProfile, BlockRule
-from ...spider.core.selectors import CssSelector, XPathSelector, LabelSiblingSelector, ParentSelector
-from ...spider.core.processors import ExtractFloat, ParseLayout, ParseAge, RemoveSpaces, ExtractAfterString
+from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, MappingProfile
+from ...spider.core.selectors import CssSelector, XPathSelector
+from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces
 
 def get_yungching_profile() -> MappingProfile:
     rules = [
-        # 1. House Info Block
-        BlockRule(
+        # 1. House Info Block (Top Area)
+        ContainerRule(
             name="house_info_block",
-            container_selector=CssSelector('div.house-info'),
+            selector=CssSelector('div.house-info, .m-house-detail-header, .house-info-name'),
             rules=[
                 FieldRule(
                     name="title",
-                    selector=CssSelector('.case-name'),
+                    selector=CssSelector('.case-name, .house-name, h1, .title'),
                     processors=[RemoveSpaces()]
                 ),
                 FieldRule(
                     name="total_price",
-                    selector=ParentSelector(XPathSelector('.//*[contains(text(), "萬")]')),
+                    # 精準抓取折扣後的價格，避免抓到劃掉的原價
+                    selector=CssSelector('.price-wrapper .price, .price-num, .price-info'),
                     processors=[ExtractFloat()]
                 ),
                 FieldRule(
                     name="address",
-                    selector=CssSelector('.case-desc'),
+                    selector=CssSelector('.case-desc, .address-text, .house-address, .address'),
                     processors=[RemoveSpaces()]
                 )
             ]
         ),
         
-        # 2. Basic Detail Block
-        BlockRule(
-            name="basic_detail_block",
-            container_selector=CssSelector('div.detail-block.basic'),
+        # 2. Image Gallery Block
+        ContainerRule(
+            name="gallery_block",
+            selector=CssSelector('.album-handlers-swiper, .yc-ng-album, .slick-track, .house-photo'),
             rules=[
                 FieldRule(
-                    name="layout",
-                    selector=LabelSiblingSelector(["建物格局"], container_css=".item")
-                ),
-                FieldRule(
-                    name="building_ping",
-                    selector=LabelSiblingSelector(["建物坪數"], container_css=".item"),
-                    processors=[ExtractAfterString("建物坪數"), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="main_building_ping",
-                    selector=LabelSiblingSelector(["主建物"], container_css=".item"),
-                    processors=[ExtractAfterString("主建物"), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="shared_ping",
-                    selector=LabelSiblingSelector(["共同使用小計"], container_css=".item"),
-                    processors=[ExtractAfterString("共同使用小計"), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="accessory_ping",
-                    selector=LabelSiblingSelector(["附屬建物小計"], container_css=".item"),
-                    processors=[ExtractAfterString("附屬建物小計"), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="land_ping",
-                    selector=LabelSiblingSelector(["土地坪數"], container_css=".item"),
-                    processors=[ExtractAfterString("土地坪數"), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="land_zoning",
-                    selector=LabelSiblingSelector(["土地使用分區"], container_css=".item"),
-                    processors=[ExtractAfterString("使用分區")]
-                ),
-                FieldRule(
-                    name="legal_usage",
-                    selector=LabelSiblingSelector(["謄本用途"], container_css=".item"),
-                    processors=[ExtractAfterString("謄本用途")]
-                ),
-                FieldRule(
-                    name="unit_price",
-                    selector=LabelSiblingSelector(["單價"], container_css=".item"),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="unit_price_fallback",
-                    selector=LabelSiblingSelector(["房貸"], container_css=".item"),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="raw_building_type",
-                    selector=LabelSiblingSelector(["型態"], container_css=".item"),
-                    processors=[ExtractAfterString("型態")]
-                ),
-                FieldRule(
-                    name="age",
-                    selector=LabelSiblingSelector(["屋齡"], container_css=".item"),
-                    processors=[ParseAge()]
-                ),
-                FieldRule(
-                    name="community_name",
-                    selector=LabelSiblingSelector(["社區"], container_css=".item"),
-                    processors=[ExtractAfterString("社區")]
-                ),
-                FieldRule(
-                    name="floor_info",
-                    selector=LabelSiblingSelector(["樓層"], container_css=".item")
-                ),
-                FieldRule(
-                    name="management_fee",
-                    selector=LabelSiblingSelector(["管理費"], container_css=".item")
-                ),
-                FieldRule(
-                    name="orientation",
-                    selector=LabelSiblingSelector(["朝向"], container_css=".item"),
-                    processors=[ExtractAfterString("朝向")]
-                ),
-                FieldRule(
-                    name="has_parking",
-                    selector=LabelSiblingSelector(["車位數量"], container_css=".item")
-                ),
-                FieldRule(
-                    name="parking_type",
-                    selector=LabelSiblingSelector(["車位"], container_css=".item")
+                    name="image_urls",
+                    selector=CssSelector('img'),
+                    extract_attr='src',
+                    is_list=True
                 )
             ]
         ),
         
-        # global fields
-        FieldRule(
-            name="image_urls",
-            selector=CssSelector('.album-handlers-swiper img, .yc-ng-album img'),
-            extract_attr='src',
-            is_list=True
+        # 3. Basic Detail Block (Strictly scoped)
+        ContainerRule(
+            name="basic_info_block",
+            # Strictly limit to the detail blocks to avoid matching `.item` globally
+            selector=CssSelector('.detail-block.basic, .m-house-detail-list, .detail-list, .house-detail-info'),
+            rules=[
+                ListRule(
+                    name="basic_info_list",
+                    item_selector=CssSelector('.item, li'),
+                    rules=[
+                        KeyValueExtractionRule(
+                            key_selector=CssSelector('.item-title, .info-name, strong, .label, h3'), 
+                            value_selector=CssSelector('.item-detail, .info-value, span:not(.label), .content'), 
+                            key_mapping={
+                                "建物格局": "layout",
+                                "建物坪數": "building_ping",
+                                "主建物": "main_building_ping",
+                                "共同使用小計": "shared_ping",
+                                "附屬建物小計": "accessory_ping",
+                                "土地坪數": "land_ping",
+                                "土地使用分區": "land_zoning",
+                                "謄本用途": "legal_usage",
+                                "單價": "unit_price",
+                                "房貸": "unit_price_fallback",
+                                "型態": "raw_building_type",
+                                "屋齡": "age",
+                                "社區": "community_name",
+                                "樓層": "floor_info",
+                                "管理費": "management_fee",
+                                "朝向": "orientation",
+                                "車位數量": "has_parking",
+                                "車位": "parking_type"
+                            },
+                            value_processors={
+                                "building_ping": [ExtractFloat()],
+                                "main_building_ping": [ExtractFloat()],
+                                "shared_ping": [ExtractFloat()],
+                                "accessory_ping": [ExtractFloat()],
+                                "land_ping": [ExtractFloat()],
+                                "unit_price": [ExtractFloat()],
+                                "unit_price_fallback": [ExtractFloat()],
+                                "age": [ParseAge()]
+                            }
+                        )
+                    ]
+                )
+            ]
         )
     ]
     return MappingProfile(rules=rules)

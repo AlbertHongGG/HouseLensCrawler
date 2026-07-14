@@ -85,6 +85,10 @@ class BaseSpider(ABC):
             # [開啟新分頁] 避免在同一個頁面反覆跳轉導致 JS 崩潰與記憶體洩漏
             detail_tab = browser.new_tab(url)
             
+            # [前置處理] (讓 Navigator 有機會點擊展開按鈕等)
+            if hasattr(self.navigator, 'prepare_detail_page'):
+                self.navigator.prepare_detail_page(detail_tab)
+            
             # [資料萃取] (Extractor/RuleEngine 層)
             raw_data = self.rule_engine.execute(
                 self.profile, 

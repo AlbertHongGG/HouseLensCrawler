@@ -1,9 +1,7 @@
-from ...spider.core.rules import FieldRule, MappingProfile, BlockRule
-from ...spider.core.selectors import CssSelector, XPathSelector, LabelSiblingSelector
-from ...spider.core.processors import ExtractFloat, ParseLayout, ParseAge, RemoveSpaces, ExtractAfterString
-from ...spider.core.processors import BaseProcessor
+from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, MappingProfile
+from ...spider.core.selectors import CssSelector, XPathSelector
+from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces, BaseProcessor
 from typing import Any, Optional, Dict
-import re
 
 class SinyiParkingProcessor(BaseProcessor):
     def process(self, value: Any, context: Optional[Dict[str, Any]] = None) -> Any:
@@ -14,120 +12,93 @@ class SinyiParkingProcessor(BaseProcessor):
 
 def get_sinyi_profile() -> MappingProfile:
     rules = [
-        # Top-level Header Info
-        FieldRule(
-            name="title",
-            selector=XPathSelector('//span[contains(@class, "buy-content-title-name")]', timeout=10),
-            processors=[RemoveSpaces()]
-        ),
-        FieldRule(
-            name="total_price",
-            selector=XPathSelector('//div[contains(@class, "buy-content-title-total-price")]', timeout=2),
-            processors=[ExtractFloat()]
-        ),
-        FieldRule(
-            name="address",
-            selector=XPathSelector('//span[contains(@class, "buy-content-title-address")]', timeout=2),
-            processors=[RemoveSpaces()]
-        ),
-        FieldRule(
-            name="image_urls",
-            selector=XPathSelector('//div[contains(@class, "buy-buy-carousel")]//img | //div[contains(@class, "carousel_carousel-thumbnail")]//img', timeout=2),
-            extract_attr='src',
-            is_list=True
-        ),
-
-        # Title Info Block (Top bar with ping, age, layout, floor)
-        BlockRule(
-            name="title_info_block",
-            container_selector=XPathSelector('//div[contains(@class, "buy_buy-content") and .//*[contains(text(), "建坪")]]', timeout=10),
+        # 1. Header Information Block (Title, Price, Address)
+        ContainerRule(
+            name="header_block",
+            selector=CssSelector(".buy-content-title, .buy-title, .m-house-detail-header"),
             rules=[
                 FieldRule(
-                    name="building_ping",
-                    selector=LabelSiblingSelector(["建坪"]),
+                    name="title",
+                    selector=CssSelector(".buy-content-title-name, h1, .title"),
+                    processors=[RemoveSpaces()]
+                ),
+                FieldRule(
+                    name="total_price",
+                    selector=CssSelector(".buy-content-title-total-price, .price"),
                     processors=[ExtractFloat()]
                 ),
                 FieldRule(
-                    name="layout",
-                    selector=LabelSiblingSelector(["格局"]),
-                    processors=[ExtractAfterString("格局")]
-                ),
-                FieldRule(
-                    name="age",
-                    selector=LabelSiblingSelector(["屋齡"]),
-                    processors=[ParseAge()]
-                ),
-                FieldRule(
-                    name="floor_info",
-                    selector=LabelSiblingSelector(["樓層"]),
-                    processors=[ExtractAfterString("樓層")]
+                    name="address",
+                    selector=CssSelector(".buy-content-title-address, .address"),
+                    processors=[RemoveSpaces()]
                 )
             ]
         ),
-        # Spec Block (The detailed specification table)
-        BlockRule(
-            name="spec_block",
-            container_selector=XPathSelector('//div[contains(@class, "buy_buy-content-main") or contains(@class, "buyContentBasicM")]', timeout=10),
+        
+        # 2. Image Gallery Block
+        ContainerRule(
+            name="gallery_block",
+            selector=CssSelector(".buy-buy-carousel, .carousel_carousel-thumbnail, .slick-slider"),
             rules=[
                 FieldRule(
-                    name="unit_price",
-                    selector=LabelSiblingSelector(["建坪單價"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="main_building_ping",
-                    selector=LabelSiblingSelector(["主建物", "主+附"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="shared_ping",
-                    selector=LabelSiblingSelector(["共有部份"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="accessory_ping",
-                    selector=LabelSiblingSelector(["附屬建物"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="land_ping",
-                    selector=LabelSiblingSelector(["地坪"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="balcony_ping",
-                    selector=LabelSiblingSelector(["陽台"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="rain_cover_ping",
-                    selector=LabelSiblingSelector(["雨遮"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="raw_building_type",
-                    selector=LabelSiblingSelector(["類型"]),
-                    processors=[ExtractAfterString("類型")]
-                ),
-                FieldRule(
-                    name="parking_ping",
-                    selector=LabelSiblingSelector(["停車空間"]),
-                    processors=[ExtractFloat()]
-                ),
-                FieldRule(
-                    name="parking_type",
-                    selector=LabelSiblingSelector(["車位"]),
-                    processors=[SinyiParkingProcessor()]
-                ),
-                FieldRule(
-                    name="management_fee",
-                    selector=LabelSiblingSelector(["警衛管理", "管理費"]),
-                    processors=[ExtractAfterString("管理")]
-                ),
-                FieldRule(
-                    name="orientation",
-                    selector=LabelSiblingSelector(["建物朝向", "落地窗朝向", "朝向"]),
-                    processors=[ExtractAfterString("朝向")]
+                    name="image_urls",
+                    selector=CssSelector("img"),
+                    extract_attr='src',
+                    is_list=True
+                )
+            ]
+        ),
+        
+        # 3. Basic Information Block (Strictly limited to the table to avoid catching header specs)
+        ContainerRule(
+            name="basic_info_block",
+            # We strictly target #basic-data or specific basic table classes.
+            selector=CssSelector("#basic-data, .buy-content-basic, .basic-info-content"),
+            rules=[
+                ListRule(
+                    name="basic_info_list",
+                    item_selector=CssSelector(".item, .buy-content-basic-cell, li"),
+                    rules=[
+                        KeyValueExtractionRule(
+                            key_selector=CssSelector("span:first-child, .title, label"),
+                            value_selector=CssSelector("span:last-child, .value, .content"),
+                            key_mapping={
+                                "建坪單價": "unit_price",
+                                "建坪": "building_ping",
+                                "主建物": "main_building_ping",
+                                "主+附": "main_building_ping",
+                                "共有部份": "shared_ping",
+                                "附屬建物": "accessory_ping",
+                                "地坪": "land_ping",
+                                "陽台": "balcony_ping",
+                                "雨遮": "rain_cover_ping",
+                                "類型": "raw_building_type",
+                                "停車空間": "parking_ping",
+                                "車位": "parking_type",
+                                "警衛管理": "management_fee",
+                                "管理費": "management_fee",
+                                "建物朝向": "orientation",
+                                "落地窗朝向": "orientation",
+                                "朝向": "orientation",
+                                "格局": "layout",
+                                "屋齡": "age",
+                                "樓層": "floor_info"
+                            },
+                            value_processors={
+                                "unit_price": [ExtractFloat()],
+                                "building_ping": [ExtractFloat()],
+                                "main_building_ping": [ExtractFloat()],
+                                "shared_ping": [ExtractFloat()],
+                                "accessory_ping": [ExtractFloat()],
+                                "land_ping": [ExtractFloat()],
+                                "balcony_ping": [ExtractFloat()],
+                                "rain_cover_ping": [ExtractFloat()],
+                                "parking_ping": [ExtractFloat()],
+                                "parking_type": [SinyiParkingProcessor()],
+                                "age": [ParseAge()]
+                            }
+                        )
+                    ]
                 )
             ]
         )

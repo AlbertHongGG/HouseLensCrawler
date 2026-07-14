@@ -17,9 +17,67 @@ class BaseRule(ABC):
         pass
 
 
+class ContainerRule(BaseRule):
+    """
+    Locates a single structural block (container) in the DOM and executes its child rules inside it.
+    This creates a Progressive Localization Tree.
+    """
+    def __init__(self, name: str, selector: BaseSelector, rules: List[BaseRule]):
+        self.name = name
+        self.selector = selector
+        self.rules = rules
+        
+    def extract(self, context: ChromiumElement) -> Tuple[Dict[str, Any], Dict[str, ChromiumElement]]:
+        container = self.selector.select(context)
+        if not container:
+            logging.debug(f"[ContainerRule] '{self.name}' NOT FOUND using {self.selector}")
+            return {}, {}
+            
+        logging.debug(f"[ContainerRule] '{self.name}' FOUND")
+        results = {}
+        elements = {}
+        
+        for rule in self.rules:
+            r_results, r_elements = rule.extract(container)
+            results.update(r_results)
+            elements.update(r_elements)
+            
+        return results, elements
+
+
+class ListRule(BaseRule):
+    """
+    Locates multiple identical blocks (list items) in the DOM and executes its child rules inside EACH item.
+    Useful for extracting lists of specs, rows in a table, or multiple key-value pairs.
+    """
+    def __init__(self, name: str, item_selector: BaseSelector, rules: List[BaseRule]):
+        self.name = name
+        self.item_selector = item_selector
+        self.rules = rules
+
+    def extract(self, context: ChromiumElement) -> Tuple[Dict[str, Any], Dict[str, ChromiumElement]]:
+        results = {}
+        elements = {}
+        items = self.item_selector.select_all(context)
+        
+        if not items:
+            logging.debug(f"[ListRule] '{self.name}' items NOT FOUND using {self.item_selector}")
+            return results, elements
+            
+        logging.debug(f"[ListRule] '{self.name}' FOUND {len(items)} items")
+        
+        for item in items:
+            for rule in self.rules:
+                r_results, r_elements = rule.extract(item)
+                results.update(r_results)
+                elements.update(r_elements)
+                
+        return results, elements
+
+
 class FieldRule(BaseRule):
     """
-    Defines how to extract and process a single field from the DOM.
+    Leaf node rule. Defines how to extract and process a single field from the current DOM context.
     """
     def __init__(
         self,
@@ -81,48 +139,19 @@ class FieldRule(BaseRule):
         return results, elements
 
 
-class BlockRule(BaseRule):
+class KeyValueExtractionRule(BaseRule):
     """
-    Defines a reusable block (Composite Rule) that shares a common container.
-    """
-    def __init__(self, name: str, container_selector: BaseSelector, rules: List[BaseRule]):
-        self.name = name
-        self.container_selector = container_selector
-        self.rules = rules
-        
-    def extract(self, context: ChromiumElement) -> Tuple[Dict[str, Any], Dict[str, ChromiumElement]]:
-        container = self.container_selector.select(context)
-        if not container:
-            print(f"[DEBUG] Block '{self.name}' container NOT FOUND!")
-            return {}, {}
-            
-        print(f"[DEBUG] Block '{self.name}' container FOUND!")
-        results = {}
-        elements = {}
-        
-        for rule in self.rules:
-            r_results, r_elements = rule.extract(container)
-            results.update(r_results)
-            elements.update(r_elements)
-            
-        return results, elements
-
-
-class KeyValueRule(BaseRule):
-    """
-    Finds a list of container elements, extracts key and value from each,
-    cleans the key (stripping HTML), and maps them to standard field names.
-    This bypasses anti-scraping tag obfuscation (e.g. 591's <vsm> tags).
+    Special rule used inside a ListRule. 
+    It extracts a key and a value from the context, checks if the key matches a mapping, 
+    and outputs the mapped field name and processed value.
     """
     def __init__(
         self,
-        container_selector: BaseSelector,
         key_selector: BaseSelector,
         value_selector: BaseSelector,
         key_mapping: Dict[str, str],
         value_processors: Optional[Dict[str, List[BaseProcessor]]] = None
     ):
-        self.container_selector = container_selector
         self.key_selector = key_selector
         self.value_selector = value_selector
         self.key_mapping = key_mapping
@@ -140,36 +169,24 @@ class KeyValueRule(BaseRule):
         return text
 
     def extract(self, context: ChromiumElement) -> Tuple[Dict[str, Any], Dict[str, ChromiumElement]]:
-        results = {}
-        elements = {}
-        container_eles = self.container_selector.select_all(context)
+        key_ele = self.key_selector.select(context)
+        value_ele = self.value_selector.select(context)
         
-        if not container_eles:
-            print(f"[DEBUG] KeyValueRule container_selector {self.container_selector} NOT FOUND")
-            return results, elements
+        if key_ele and value_ele:
+            clean_key = self._clean_key(key_ele.html)
             
-        for container in container_eles:
-            key_ele = self.key_selector.select(container)
-            value_ele = self.value_selector.select(container)
-            
-            if key_ele and value_ele:
-                clean_key = self._clean_key(key_ele.html)
-                print(f"[DEBUG] KeyValueRule clean_key: '{clean_key}'")
-                
-                for mapped_key_name, target_field in self.key_mapping.items():
-                    if mapped_key_name in clean_key:
-                        raw_value = self._clean_value(value_ele.html)
+            for mapped_key_name, target_field in self.key_mapping.items():
+                if mapped_key_name in clean_key:
+                    raw_value = self._clean_value(value_ele.html)
+                    
+                    processors = self.value_processors.get(target_field, [])
+                    current_val = raw_value
+                    for processor in processors:
+                        current_val = processor.process(current_val)
                         
-                        processors = self.value_processors.get(target_field, [])
-                        current_val = raw_value
-                        for processor in processors:
-                            current_val = processor.process(current_val)
-                            
-                        results[target_field] = current_val
-                        elements[target_field] = value_ele
-                        break
-                        
-        return results, elements
+                    return {target_field: current_val}, {target_field: value_ele}
+                    
+        return {}, {}
 
 
 class MappingProfile:

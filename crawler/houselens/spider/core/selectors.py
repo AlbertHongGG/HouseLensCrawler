@@ -92,41 +92,4 @@ class ParentSelector(BaseSelector):
         return parents
 
 
-class LabelSiblingSelector(BaseSelector):
-    """
-    Finds an element by searching for a label, then going to its parent/sibling container.
-    This is extremely useful for 'key-value' tables.
-    """
-    def __init__(self, labels: List[str], container_css: str = None, timeout: float = 0):
-        self.labels = labels
-        self.container_css = container_css
-        self.timeout = timeout
 
-    def select(self, context: ChromiumElement) -> Optional[ChromiumElement]:
-        for label in self.labels:
-            # First try exact match, then partial match
-            label_ele = context.ele(f'xpath:.//*[normalize-space(text())="{label}"]', timeout=self.timeout)
-            if not label_ele:
-                label_ele = context.ele(f'text:{label}', timeout=self.timeout)
-            
-            if label_ele:
-                if self.container_css:
-                    container = label_ele.parent(self.container_css)
-                    if container:
-                        return container
-                return label_ele.parent() # Default to immediate parent
-        return None
-
-    def select_all(self, context: ChromiumElement) -> List[ChromiumElement]:
-        # Usually not needed for simple label lookups, but implementing for completeness
-        result = []
-        for label in self.labels:
-            label_eles = context.eles(f'text:{label}', timeout=self.timeout)
-            for label_ele in label_eles:
-                if self.container_css:
-                    container = label_ele.parent(self.container_css)
-                    if container and container not in result:
-                        result.append(container)
-                elif label_ele.parent() not in result:
-                    result.append(label_ele.parent())
-        return result

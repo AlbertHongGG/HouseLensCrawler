@@ -53,3 +53,14 @@ class SpiderYungchingNavigator(BaseNavigator):
             import logging
             logging.error(f"[{self.platform_name}] Error extracting links: {e}")
             return []
+
+    def prepare_detail_page(self, detail_tab: ChromiumPage):
+        """點擊 '看詳細基本資訊' 以展開規格表"""
+        try:
+            # 永慶的詳細資訊通常需要點擊才能完全顯示在 DOM 中
+            btn = detail_tab.ele('text:看詳細基本資訊', timeout=2)
+            if btn:
+                btn.click()
+                time.sleep(1) # 等待動畫或渲染
+        except Exception:
+            pass

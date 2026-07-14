@@ -114,3 +114,40 @@ class ExtractAfterString(BaseProcessor):
         if self.marker in value:
             return value.split(self.marker, 1)[1].strip()
         return value.strip()
+
+
+class SplitProcessor(BaseProcessor):
+    """
+    Splits the string by a delimiter and returns the part at the specified index.
+    """
+    def __init__(self, delimiter: str = ':', index: int = 1):
+        self.delimiter = delimiter
+        self.index = index
+        
+    def process(self, value: Any, context: Optional[Dict[str, Any]] = None) -> str:
+        if not value or not isinstance(value, str):
+            return ""
+        parts = value.split(self.delimiter)
+        if len(parts) > self.index:
+            return parts[self.index].strip()
+        return value.strip()
+
+
+class RegexProcessor(BaseProcessor):
+    """
+    Applies a regular expression and returns the matched group.
+    """
+    def __init__(self, pattern: str, group: int = 1):
+        self.pattern = pattern
+        self.group = group
+        
+    def process(self, value: Any, context: Optional[Dict[str, Any]] = None) -> str:
+        if not value or not isinstance(value, str):
+            return ""
+        match = re.search(self.pattern, value)
+        if match:
+            try:
+                return match.group(self.group).strip()
+            except IndexError:
+                return match.group(0).strip()
+        return ""
