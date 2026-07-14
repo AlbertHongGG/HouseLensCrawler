@@ -1,5 +1,5 @@
 from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
-from ...spider.core.selectors import CssSelector, XPathSelector
+from ...spider.core.selectors import CssSelector, XPathSelector, MultipleSelector
 from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces
 from ...spider.core.post_processors import CalculateIndoorPingProcessor
 
@@ -12,7 +12,7 @@ def get_yungching_profile() -> MappingProfile:
             rules=[
                 FieldRule(
                     name="title",
-                    selector=CssSelector('.case-name, .house-name, h1, .title'),
+                    selector=CssSelector('.case-name, h1, .title'),
                     processors=[RemoveSpaces()]
                 ),
                 FieldRule(
@@ -23,7 +23,15 @@ def get_yungching_profile() -> MappingProfile:
                 ),
                 FieldRule(
                     name="address",
-                    selector=CssSelector('.case-desc, .address-text, .house-address, .address'),
+                    selector=MultipleSelector([
+                        CssSelector('.address-text'),
+                        CssSelector('.address, .house-address')
+                    ]),
+                    processors=[RemoveSpaces()]
+                ),
+                FieldRule(
+                    name="community_name",
+                    selector=CssSelector('a.community, .community-name'),
                     processors=[RemoveSpaces()]
                 )
             ]
@@ -32,7 +40,7 @@ def get_yungching_profile() -> MappingProfile:
         # 2. Image Gallery Block
         ContainerRule(
             name="gallery_block",
-            selector=CssSelector('.album-handlers-swiper, .yc-ng-album, .slick-track, .house-photo'),
+            selector=CssSelector('.house-album, .album-handlers-swiper, .yc-ng-album, .slick-track, .house-photo'),
             rules=[
                 FieldRule(
                     name="image_urls",
@@ -51,7 +59,7 @@ def get_yungching_profile() -> MappingProfile:
             rules=[
                 ListRule(
                     name="basic_info_list",
-                    item_selector=CssSelector('.item, li'),
+                    item_selector=CssSelector('.detail-row, .item, li'),
                     rules=[
                         BlockKeyValueRule(
                             key_mapping={
@@ -67,7 +75,6 @@ def get_yungching_profile() -> MappingProfile:
                                 "房貸": "unit_price_fallback",
                                 "型態": "raw_building_type",
                                 "屋齡": "age",
-                                "社區": "community_name",
                                 "樓層": "floor_info",
                                 "管理費": "management_fee",
                                 "朝向": "orientation",

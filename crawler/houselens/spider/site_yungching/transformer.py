@@ -17,7 +17,8 @@ class SpiderYungchingTransformer(ITransformer):
         if not unit_price:
             unit_price = float(raw_data.get('unit_price_fallback') or 0.0)
             
-        address = str(raw_data.get('address') or "").strip()
+        address_raw = str(raw_data.get('address') or "").strip()
+        address = address_raw.split('\n')[0].strip() if '\n' in address_raw else address_raw
 
         layout_text = str(raw_data.get('layout') or "")
         layout_data = parse_layout(layout_text)
@@ -45,8 +46,8 @@ class SpiderYungchingTransformer(ITransformer):
         land_zoning = str(raw_data.get('land_zoning') or "")
 
         community_name = str(raw_data.get('community_name') or "")
-        if "更多社區資訊" in community_name:
-            community_name = community_name.split("更多社區資訊")[0].strip()
+        if "看更多" in community_name:
+            community_name = community_name.split("看更多")[0].strip()
 
         # Parking
         has_parking = False
