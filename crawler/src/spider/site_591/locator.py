@@ -9,31 +9,30 @@ class Spider591Locator(BaseLocator):
     符合單一職責原則：不涉及任何字串切割、清理或轉型，純粹產出元素字典。
     """
     
-    def _get_parent_ele(self, container: Any, label: str) -> Optional[Any]:
+    def _get_parent_ele(self, container: Any, label: Any) -> Optional[Any]:
         """
         [工具] 透過標籤文字在特定的 Container 內尋找目標區塊 (Wrapper)。
         """
         if not container:
+            # Fallback to the page itself if container is not found
+            container = self._current_tab
+        if not container:
             return None
-        try:
-            # 591 會插入亂碼標籤 (如 <wk></wk>) 以及空白字元來防爬蟲，導致 XPath text() 失效。
-            # 解法：直接找尋常見的外層 Wrapper，並利用 DrissionPage 的 .text (會自動過濾 HTML) 
-            # 將字串去空白後比對，若符合則整塊 Wrapper 回傳給 Parser 解析。
             
-            wrappers = container.eles('.detail-house-item', timeout=0)
-            if not wrappers:
-                wrappers = container.eles('.info-floor-left-2', timeout=0)
-            if not wrappers:
-                wrappers = container.eles('.info-addr-content', timeout=0)
-            if not wrappers:
-                wrappers = container.eles('.info-box-inner', timeout=0)
-                
-            for wrapper in wrappers:
-                # 把 text 內的空白和換行去掉，避免 "法\n定\n用\n途" 導致比對失敗
-                clean_text = wrapper.text.replace(' ', '').replace('\n', '')
-                if label in clean_text:
-                    return wrapper
+        try:
+            # 依序使用 selector 尋找，從最精確的 item 到較大範圍的 box，避免抓到過大的容器
+            selectors = ['.detail-house-item', '.house-info-item', '.info-floor-left-2', '.info-addr-content', '.info-box-inner']
+            for selector in selectors:
+                wrappers = container.eles(selector, timeout=0)
+                for wrapper in wrappers:
+                    # 把 text 內的空白和換行去掉，避免 "法\n定\n用\n途" 導致比對失敗
+                    clean_text = wrapper.text.replace(' ', '').replace('\n', '')
                     
+                    if isinstance(label, tuple):
+                        if any(l in clean_text for l in label):
+                            return wrapper
+                    elif label in clean_text:
+                        return wrapper
         except Exception:
             pass
         return None
@@ -42,6 +41,7 @@ class Spider591Locator(BaseLocator):
         """
         定位詳細頁面的所有目標元素，回傳字典以供 Visualizer 與 Parser 使用。
         """
+        self._current_tab = tab
         # 等待主要畫面載入，並確保 Vue 區塊已渲染
         tab.wait.eles_loaded('xpath://h1', timeout=5)
         
@@ -98,18 +98,16 @@ class Spider591Locator(BaseLocator):
                 elements['orientation'] = self._get_parent_ele(addr_box, '朝向')
                 
         # [3] 房屋資料區塊
-        if house_data_box:
-            elements['raw_building_type'] = self._get_parent_ele(house_data_box, '型態')
-            elements['management_fee'] = self._get_parent_ele(house_data_box, '管理費')
-            elements['has_tenant'] = self._get_parent_ele(house_data_box, '帶租約')
-            elements['legal_usage'] = self._get_parent_ele(house_data_box, '法定用途')
-            elements['parking_info'] = self._get_parent_ele(house_data_box, '車位')
+        elements['raw_building_type'] = self._get_parent_ele(house_data_box, '型態')
+        elements['management_fee'] = self._get_parent_ele(house_data_box, '管理費')
+        elements['has_tenant'] = self._get_parent_ele(house_data_box, '帶租約')
+        elements['legal_usage'] = self._get_parent_ele(house_data_box, '法定用途')
+        elements['parking_info'] = self._get_parent_ele(house_data_box, '車位')
             
         # [4] 坪數說明區塊
-        if nav_vue_root:
-            elements['main_building_ping'] = self._get_parent_ele(nav_vue_root, '主建物')
-            elements['accessory_ping'] = self._get_parent_ele(nav_vue_root, '附屬建物')
-            elements['shared_ping'] = self._get_parent_ele(nav_vue_root, '共用部分')
-            elements['land_ping'] = self._get_parent_ele(nav_vue_root, '土地坪數')
+        elements['main_building_ping'] = self._get_parent_ele(nav_vue_root, '主建物')
+        elements['accessory_ping'] = self._get_parent_ele(nav_vue_root, '附屬建物')
+        elements['shared_ping'] = self._get_parent_ele(nav_vue_root, '共用部分')
+        elements['land_ping'] = self._get_parent_ele(nav_vue_root, ('土地坪數', '土地(持分)坪數', '土地（持分）坪數'))
             
         return elements

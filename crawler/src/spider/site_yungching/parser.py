@@ -47,7 +47,11 @@ class SpiderYungchingParser(BaseParser):
             floor_text = self.clean_text(elements.get('floor'))
             floor, total_floor = self.parse_floor(floor_text)
             
-            raw_building_type = self.extract_after(layout_text, "型態")
+            raw_building_type_ele = elements.get('raw_building_type')
+            if raw_building_type_ele:
+                raw_building_type = self.extract_after(self.clean_text(raw_building_type_ele), "型態")
+            else:
+                raw_building_type = self.extract_after(layout_text, "型態")
             legal_usage = self.extract_after(self.clean_text(elements.get('legal_usage')), "謄本用途")
             land_zoning = self.extract_after(self.clean_text(elements.get('land_zoning')), "使用分區")
             

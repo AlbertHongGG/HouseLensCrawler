@@ -111,7 +111,7 @@ class BaseSpider(ABC):
                         # 廣播事件：資料解析完畢 (供 Storage 存檔)
                         event_bus.emit(Event.ITEM_PARSED, item=prop)
                         items_processed += 1
-                        logging.info(f"[{self.platform_name}] Saved detail {source_id}.")
+                        logging.info(f"[{self.platform_name}] Parsed detail {source_id}.")
                     else:
                         logging.warning(f"[{self.platform_name}] Failed to parse {url}")
                         

@@ -49,11 +49,16 @@ class SinyiLocator(BaseLocator):
                 "樓層": "floor",
                 "管理費": "management_fee",
                 "朝向": "orientation",
-                "車位": "parking"
+                "車位": "parking",
+                "停車空間": "parking_ping"
             }
             
             for label_text, key in labels.items():
-                label_ele = basic_block.ele(f'text:{label_text}', timeout=0.1)
+                if label_text in ["車位", "建坪"]:
+                    # Exact match to prevent "車位" from matching "建坪單價 本物件含車位..."
+                    label_ele = basic_block.ele(f'xpath:.//*[normalize-space(text())="{label_text}"]', timeout=0)
+                else:
+                    label_ele = basic_block.ele(f'text:{label_text}', timeout=0)
                 if label_ele:
                     # 在信義房屋的 DOM 中，標題與數值通常被包裝在同一個 div 裡面
                     # 所以我們往上找 1 或 2 層，直到找到包含換行的那個區塊

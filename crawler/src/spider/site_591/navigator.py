@@ -44,9 +44,9 @@ class Spider591Navigator(BaseNavigator):
             return []
             
         # 尋找 ware-item，若改版則容錯尋找 housing-item
-        items = wrap.eles('.ware-item')
+        items = wrap.eles('.ware-item', timeout=0)
         if not items:
-            items = wrap.eles('.housing-item')
+            items = wrap.eles('.housing-item', timeout=0)
         
         urls_to_fetch = []
         for item in items:

@@ -26,7 +26,10 @@ class SpiderYungchingLocator(BaseLocator):
         house_info = tab.ele('css:div.house-info')
         if house_info:
             elements['title'] = house_info.ele('css:.case-name')
-            elements['total_price'] = house_info.ele('xpath:.//*[contains(text(), "萬")]')
+            price_ele = house_info.ele('xpath:.//*[contains(text(), "萬")]')
+            if price_ele:
+                # 往上找一層，以涵蓋數字與單位
+                elements['total_price'] = price_ele.parent()
             elements['address'] = house_info.ele('css:.case-desc')
             
         basic_block = tab.ele('css:div.detail-block.basic', timeout=5)
@@ -34,7 +37,7 @@ class SpiderYungchingLocator(BaseLocator):
             # 為了更細緻的 Highlight，我們迭代所有的 .item
             items = basic_block.eles('css:.item')
             for item in items:
-                title_ele = item.ele('css:.item-title')
+                title_ele = item.ele('css:.item-title', timeout=0)
                 if not title_ele:
                     continue
                 title = title_ele.text
@@ -55,8 +58,12 @@ class SpiderYungchingLocator(BaseLocator):
                     elements['land_zoning'] = item
                 if "謄本用途" in title:
                     elements['legal_usage'] = item
-                if "房貸" in title:
-                    elements['unit_price'] = item  # 單價通常跟房貸試算在同一 item 或其附近
+                if "單價" in title:
+                    elements['unit_price'] = item
+                if "房貸" in title and 'unit_price' not in elements:
+                    elements['unit_price'] = item  # Fallback
+                if "型態" in title:
+                    elements['raw_building_type'] = item
                 if "屋齡" in title:
                     elements['age'] = item
                 if "社區" in title:
@@ -78,7 +85,7 @@ class SpiderYungchingLocator(BaseLocator):
                 if '車位' in t_text and '數量' not in t_text:
                     item_ele = t.parent('.item')
                     if item_ele:
-                        detail = item_ele.ele('.item-detail')
+                        detail = item_ele.ele('.item-detail', timeout=0)
                         if detail:
                             elements['parking_type'] = detail
                             break

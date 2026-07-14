@@ -45,6 +45,7 @@ class SinyiParser(BaseParser):
         land_ping = 0.0
         balcony_ping = 0.0
         rain_cover_ping = 0.0
+        parking_ping = 0.0
         age = 0.0
         floor = ""
         total_floors = ""
@@ -104,6 +105,11 @@ class SinyiParser(BaseParser):
                         f, tf = self.parse_floor(next_line)
                         floor = f.replace('樓', '').replace('B', '-').strip()
                         total_floors = tf.replace('樓', '').strip()
+                elif line == "停車空間":
+                    if "坪" in next_line:
+                        parking_ping = self.extract_float(next_line)
+                    elif "坪" in line:
+                        parking_ping = self.extract_float(line)
                 elif line == "車位":
                     if next_line != "--" and next_line != "無" and next_line:
                         has_parking = True
@@ -156,5 +162,6 @@ class SinyiParser(BaseParser):
             management_fee=management_fee or None,
             orientation=orientation or None,
             parking_type=parking_type or None,
-            has_parking=has_parking
+            has_parking=has_parking,
+            parking_ping=parking_ping or None
         )
