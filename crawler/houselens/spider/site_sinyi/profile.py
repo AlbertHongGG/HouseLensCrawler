@@ -1,4 +1,4 @@
-from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, MappingProfile
+from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
 from ...spider.core.selectors import CssSelector, XPathSelector
 from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces, BaseProcessor
 from typing import Any, Optional, Dict
@@ -59,9 +59,7 @@ def get_sinyi_profile() -> MappingProfile:
                     name="basic_info_list",
                     item_selector=CssSelector(".item, .buy-content-basic-cell, li"),
                     rules=[
-                        KeyValueExtractionRule(
-                            key_selector=CssSelector("span:first-child, .title, label"),
-                            value_selector=CssSelector("span:last-child, .value, .content"),
+                        BlockKeyValueRule(
                             key_mapping={
                                 "建坪單價": "unit_price",
                                 "建坪": "building_ping",

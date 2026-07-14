@@ -55,12 +55,21 @@ class SpiderYungchingNavigator(BaseNavigator):
             return []
 
     def prepare_detail_page(self, detail_tab: ChromiumPage):
-        """點擊 '看詳細基本資訊' 以展開規格表"""
+        """[準備] 點擊 '看詳細基本資訊' 以展開規格表，並確保畫面載入"""
         try:
+            # 確保標題已出現
+            detail_tab.wait.eles_loaded('tag:h1', timeout=10)
+            
             # 永慶的詳細資訊通常需要點擊才能完全顯示在 DOM 中
-            btn = detail_tab.ele('text:看詳細基本資訊', timeout=2)
+            btn = detail_tab.ele('text:看詳細基本資訊', timeout=5)
             if btn:
                 btn.click()
                 time.sleep(1) # 等待動畫或渲染
-        except Exception:
-            pass
+                
+            # 確保房屋資料區塊出現
+            detail_tab.wait.eles_loaded('.house-info-detail', timeout=5)
+            
+            detail_tab.scroll.down(500)
+            time.sleep(0.5)
+        except Exception as e:
+            logging.warning(f"[{self.platform_name}] Error preparing detail page: {e}")

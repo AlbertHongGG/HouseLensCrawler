@@ -82,3 +82,32 @@ class Spider591Navigator(BaseNavigator):
         except Exception as e:
             logging.warning(f"[{self.platform_name}] Error finding next page button: {e}")
             return False
+
+    def prepare_detail_page(self, detail_tab: ChromiumPage):
+        """
+        [準備] 在開始抓取詳細頁面資料前，嚴格等待 Vue 或 React 渲染完畢。
+        這對於確保 BlockKeyValueRule 能夠抓到正確的內容至關重要。
+        """
+        try:
+            # 等待主要畫面載入，確保 Vue 區塊已出現
+            detail_tab.wait.eles_loaded('xpath://h1', timeout=5)
+            
+            t0 = time.time()
+            # 嚴格等待 Vue 將 ${title} 等佔位符替換為實際資料
+            while True:
+                h1 = detail_tab.ele('xpath://h1', timeout=0)
+                if h1 and '${title}' not in h1.text:
+                    break
+                if time.time() - t0 > 5:
+                    break
+                time.sleep(0.1)
+                
+            # 等待核心資訊區塊出現
+            detail_tab.wait.eles_loaded('.info-box-price-2', timeout=5)
+            
+            # 往下滾動一點，觸發 Lazy Load 或異步區塊載入 (例如 detail-house-box)
+            detail_tab.scroll.down(500)
+            time.sleep(0.5)
+            
+        except Exception as e:
+            logging.warning(f"[{self.platform_name}] Error preparing detail page: {e}")

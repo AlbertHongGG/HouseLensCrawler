@@ -189,6 +189,54 @@ class KeyValueExtractionRule(BaseRule):
         return {}, {}
 
 
+class BlockKeyValueRule(BaseRule):
+    """
+    A robust rule that takes an entire semantic block (context), cleans all HTML tags,
+    checks if a mapped key exists in the text, and returns the parsed value.
+    This entirely ignores CSS classes for 'key' or 'value', making it highly resilient
+    to DOM obfuscation. Returns the entire block as the highlight element.
+    """
+    def __init__(
+        self,
+        key_mapping: Dict[str, str],
+        value_processors: Optional[Dict[str, List[BaseProcessor]]] = None
+    ):
+        self.key_mapping = key_mapping
+        self.value_processors = value_processors or {}
+
+    def extract(self, context: ChromiumElement) -> Tuple[Dict[str, Any], Dict[str, ChromiumElement]]:
+        if not context:
+            return {}, {}
+            
+        raw_html = context.html
+        if not raw_html:
+            return {}, {}
+            
+        # 1. 暴力拔除所有 HTML tags，並移除所有空白與換行
+        text = re.sub(r'<[^>]+>', '', raw_html)
+        text = text.replace(' ', '').replace('\n', '').strip()
+        
+        # 2. 檢查是否有任何 mapped key 存在於字串中
+        for mapped_key_name, target_field in self.key_mapping.items():
+            if mapped_key_name in text:
+                # 若包含該 key，則把 key 以及可能出現的冒號剔除，剩下的大部分就是 value
+                # 例如: "格局:2房1廳" -> "2房1廳"
+                raw_value = text.replace(mapped_key_name, '')
+                raw_value = raw_value.replace(':', '').replace('：', '')
+                
+                # 3. 處理數值
+                processors = self.value_processors.get(target_field, [])
+                current_val = raw_value
+                for processor in processors:
+                    current_val = processor.process(current_val)
+                    
+                # 4. 回傳整個 context 作為 highlight 元素
+                return {target_field: current_val}, {target_field: context}
+                
+        return {}, {}
+
+
+
 class MappingProfile:
     """
     A collection of generic rules that define how to scrape a specific page type.

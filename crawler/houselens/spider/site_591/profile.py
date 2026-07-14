@@ -1,5 +1,5 @@
-from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, MappingProfile
-from ...spider.core.selectors import CssSelector, TextMatchSelector
+from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
+from ...spider.core.selectors import CssSelector, TextMatchSelector, XPathSelector
 from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces, SplitProcessor, RegexProcessor
 
 def get_591_profile() -> MappingProfile:
@@ -42,15 +42,13 @@ def get_591_profile() -> MappingProfile:
                 # 2.2 上方基本規格區塊 (格局、屋齡、坪數)
                 ContainerRule(
                     name="top_basic_info_block",
-                    selector=CssSelector(".info-floor-left, .detail-info-box-2"),
+                    selector=CssSelector(".info-floor-left, .detail-info-box-2, .info-box-floor"),
                     rules=[
                         ListRule(
                             name="top_specs_list",
-                            item_selector=CssSelector(".info-floor-item, .info-floor-left-2"),
+                            item_selector=CssSelector(".info-floor-item, .info-floor-left-2, .info-floor-left > div, .info-box-floor > div"),
                             rules=[
-                                KeyValueExtractionRule(
-                                    key_selector=CssSelector(".info-floor-key, span:first-child"),
-                                    value_selector=CssSelector(".info-floor-value, span:last-child"),
+                                BlockKeyValueRule(
                                     key_mapping={
                                         "權狀坪數": "building_ping",
                                         "格局": "layout",
@@ -104,55 +102,54 @@ def get_591_profile() -> MappingProfile:
             ]
         ),
         
-        # 4. 細部資料區塊 (包含 現況:住宅 這種合併字串)
+        # 4. 房屋資料區塊
         ContainerRule(
-            name="detail_introduction_area",
-            selector=CssSelector(".detail-house-box, .detail-house-content, #new-vue-sale-detail-house"),
+            name="detail_house_info_block",
+            selector=XPathSelector('//div[contains(@class, "detail-house-box") and .//h3[contains(text(), "房屋資料")]] | //div[@id="new-vue-sale-detail-house"]'),
             rules=[
-                FieldRule(
-                    name="raw_building_type",
-                    selector=TextMatchSelector("型態:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), RemoveSpaces()]
-                ),
-                FieldRule(
-                    name="has_tenant",
-                    selector=TextMatchSelector("帶租約:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), RemoveSpaces()]
-                ),
-                FieldRule(
-                    name="legal_usage",
-                    selector=TextMatchSelector("法定用途:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), RemoveSpaces()]
-                ),
-                FieldRule(
-                    name="management_fee",
-                    selector=TextMatchSelector("管理費:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), RemoveSpaces()]
-                ),
-                FieldRule(
-                    name="parking_info",
-                    selector=TextMatchSelector("車位:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), RemoveSpaces()]
-                ),
-                FieldRule(
-                    name="main_building_ping",
-                    selector=TextMatchSelector("主建物:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="accessory_ping",
-                    selector=TextMatchSelector("附屬建物:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="shared_ping",
-                    selector=TextMatchSelector("共用部分:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), ExtractFloat()]
-                ),
-                FieldRule(
-                    name="land_ping",
-                    selector=TextMatchSelector("土地坪數:", exact=False),
-                    processors=[SplitProcessor(delimiter=':'), SplitProcessor(delimiter='：'), ExtractFloat()]
+                ListRule(
+                    name="house_info_list",
+                    item_selector=CssSelector(".detail-house-item, .house-info-item, .detail-house-content > div"),
+                    rules=[
+                        BlockKeyValueRule(
+                            key_mapping={
+                                "型態": "raw_building_type",
+                                "帶租約": "has_tenant",
+                                "法定用途": "legal_usage",
+                                "管理費": "management_fee",
+                                "車位": "parking_info"
+                            }
+                        )
+                    ]
+                )
+            ]
+        ),
+        
+        # 5. 坪數說明區塊
+        ContainerRule(
+            name="detail_ping_info_block",
+            selector=XPathSelector('//div[contains(@class, "detail-house-box") and .//h3[contains(text(), "坪數說明")]]'),
+            rules=[
+                ListRule(
+                    name="ping_info_list",
+                    item_selector=CssSelector(".detail-house-item, .house-info-item, .detail-house-content > div"),
+                    rules=[
+                        BlockKeyValueRule(
+                            key_mapping={
+                                "主建物": "main_building_ping",
+                                "附屬建物": "accessory_ping",
+                                "共用部分": "shared_ping",
+                                "土地坪數": "land_ping",
+                                "土地持分坪數": "land_ping"
+                            },
+                            value_processors={
+                                "main_building_ping": [ExtractFloat()],
+                                "accessory_ping": [ExtractFloat()],
+                                "shared_ping": [ExtractFloat()],
+                                "land_ping": [ExtractFloat()]
+                            }
+                        )
+                    ]
                 )
             ]
         )

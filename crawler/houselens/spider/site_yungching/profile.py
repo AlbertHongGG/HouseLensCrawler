@@ -1,4 +1,4 @@
-from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, MappingProfile
+from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
 from ...spider.core.selectors import CssSelector, XPathSelector
 from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces
 
@@ -52,9 +52,7 @@ def get_yungching_profile() -> MappingProfile:
                     name="basic_info_list",
                     item_selector=CssSelector('.item, li'),
                     rules=[
-                        KeyValueExtractionRule(
-                            key_selector=CssSelector('.item-title, .info-name, strong, .label, h3'), 
-                            value_selector=CssSelector('.item-detail, .info-value, span:not(.label), .content'), 
+                        BlockKeyValueRule(
                             key_mapping={
                                 "建物格局": "layout",
                                 "建物坪數": "building_ping",
