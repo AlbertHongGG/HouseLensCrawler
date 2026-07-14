@@ -1,6 +1,7 @@
 from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
 from ...spider.core.selectors import CssSelector, XPathSelector
 from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces
+from ...spider.core.post_processors import CalculateIndoorPingProcessor
 
 def get_yungching_profile() -> MappingProfile:
     rules = [
@@ -89,4 +90,6 @@ def get_yungching_profile() -> MappingProfile:
             ]
         )
     ]
-    return MappingProfile(rules=rules)
+
+
+    return MappingProfile(rules=rules, post_processors=[CalculateIndoorPingProcessor()])

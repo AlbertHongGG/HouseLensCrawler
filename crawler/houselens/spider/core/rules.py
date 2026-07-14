@@ -5,6 +5,7 @@ from typing import List, Optional, Any, Dict, Callable, Tuple, Union
 from DrissionPage.items import ChromiumElement
 from .selectors import BaseSelector
 from .processors import BaseProcessor
+from .post_processors import BasePostProcessor
 
 class BaseRule(ABC):
     """
@@ -240,9 +241,11 @@ class BlockKeyValueRule(BaseRule):
 class MappingProfile:
     """
     A collection of generic rules that define how to scrape a specific page type.
+    Optionally accepts post_processors to perform derived field calculations.
     """
-    def __init__(self, rules: List[BaseRule]):
+    def __init__(self, rules: List[BaseRule], post_processors: Optional[List[BasePostProcessor]] = None):
         self.rules = rules
+        self.post_processors = post_processors or []
 
 
 class RuleEngine:
@@ -262,6 +265,10 @@ class RuleEngine:
             r_results, r_elements = rule.extract(tab)
             result.update(r_results)
             elements_map.update(r_elements)
+            
+        # 1.5 Execute post-processors
+        for processor in profile.post_processors:
+            processor.process(result, elements_map)
                         
         # 2. Emit event for Visualizer if an emitter is provided
         if self.emit_event and elements_map:
