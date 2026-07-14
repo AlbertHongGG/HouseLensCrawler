@@ -70,8 +70,11 @@ class ListRule(BaseRule):
         for item in items:
             for rule in self.rules:
                 r_results, r_elements = rule.extract(item)
-                results.update(r_results)
-                elements.update(r_elements)
+                for k, v in r_results.items():
+                    if k not in results:
+                        results[k] = v
+                        if k in r_elements:
+                            elements[k] = r_elements[k]
                 
         return results, elements
 
@@ -151,12 +154,14 @@ class KeyValueExtractionRule(BaseRule):
         key_selector: BaseSelector,
         value_selector: BaseSelector,
         key_mapping: Dict[str, str],
-        value_processors: Optional[Dict[str, List[BaseProcessor]]] = None
+        value_processors: Optional[Dict[str, List[BaseProcessor]]] = None,
+        keep_newlines: bool = False
     ):
         self.key_selector = key_selector
         self.value_selector = value_selector
         self.key_mapping = key_mapping
         self.value_processors = value_processors or {}
+        self.keep_newlines = keep_newlines
 
     def _clean_key(self, html: str) -> str:
         text = re.sub(r'<[^>]+>', '', html)
@@ -165,9 +170,17 @@ class KeyValueExtractionRule(BaseRule):
         return text
 
     def _clean_value(self, html: str) -> str:
-        text = re.sub(r'<[^>]+>', '', html)
-        text = text.replace(' ', '').replace('\n', '').strip()
-        return text
+        if self.keep_newlines:
+            html = html.replace('</div>', '\n').replace('<br>', '\n').replace('<br/>', '\n').replace('</li>', '\n').replace('</p>', '\n')
+            text = re.sub(r'<[^>]+>', '', html)
+            text = text.replace(' ', '').strip()
+            # remove empty lines
+            text = '\n'.join([line.strip() for line in text.split('\n') if line.strip()])
+            return text
+        else:
+            text = re.sub(r'<[^>]+>', '', html)
+            text = text.replace(' ', '').replace('\n', '').strip()
+            return text
 
     def extract(self, context: ChromiumElement) -> Tuple[Dict[str, Any], Dict[str, ChromiumElement]]:
         key_ele = self.key_selector.select(context)
@@ -217,6 +230,8 @@ class BlockKeyValueRule(BaseRule):
         text = re.sub(r'<[^>]+>', '', raw_html)
         text = text.replace(' ', '').replace('\n', '').strip()
         
+        results = {}
+        elements = {}
         # 2. 檢查是否有任何 mapped key 存在於字串中
         for mapped_key_name, target_field in self.key_mapping.items():
             if mapped_key_name in text:
@@ -231,10 +246,11 @@ class BlockKeyValueRule(BaseRule):
                 for processor in processors:
                     current_val = processor.process(current_val)
                     
-                # 4. 回傳整個 context 作為 highlight 元素
-                return {target_field: current_val}, {target_field: context}
+                # 4. 收集結果
+                results[target_field] = current_val
+                elements[target_field] = context
                 
-        return {}, {}
+        return results, elements
 
 
 

@@ -151,3 +151,10 @@ class RegexProcessor(BaseProcessor):
             except IndexError:
                 return match.group(0).strip()
         return ""
+
+
+class TakeFirstLine(BaseProcessor):
+    def process(self, value: Any, context: Optional[Dict[str, Any]] = None) -> Any:
+        if isinstance(value, str):
+            return value.split('\n')[0].strip()
+        return value

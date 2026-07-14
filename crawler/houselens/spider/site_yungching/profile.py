@@ -1,6 +1,6 @@
 from ...spider.core.rules import ContainerRule, ListRule, FieldRule, KeyValueExtractionRule, BlockKeyValueRule, MappingProfile
 from ...spider.core.selectors import CssSelector, XPathSelector, MultipleSelector
-from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces
+from ...spider.core.processors import ExtractFloat, ParseAge, RemoveSpaces, TakeFirstLine
 from ...spider.core.post_processors import CalculateIndoorPingProcessor
 
 def get_yungching_profile() -> MappingProfile:
@@ -55,13 +55,15 @@ def get_yungching_profile() -> MappingProfile:
         ContainerRule(
             name="basic_info_block",
             # Strictly limit to the detail blocks to avoid matching `.item` globally
-            selector=CssSelector('.detail-block.basic, .m-house-detail-list, .detail-list, .house-detail-info'),
+            selector=CssSelector('.detail-block.basic, .house-detail-info:not(.detail-list)'),
             rules=[
                 ListRule(
                     name="basic_info_list",
-                    item_selector=CssSelector('.detail-row, .item, li'),
+                    item_selector=CssSelector('.item, li'),
                     rules=[
-                        BlockKeyValueRule(
+                        KeyValueExtractionRule(
+                            key_selector=CssSelector('.item-title'),
+                            value_selector=CssSelector('.item-detail'),
                             key_mapping={
                                 "建物格局": "layout",
                                 "建物坪數": "building_ping",
@@ -79,7 +81,7 @@ def get_yungching_profile() -> MappingProfile:
                                 "管理費": "management_fee",
                                 "朝向": "orientation",
                                 "車位數量": "has_parking",
-                                "車位": "parking_type"
+                                "・車位": "parking_type"
                             },
                             value_processors={
                                 "building_ping": [ExtractFloat()],
@@ -89,8 +91,10 @@ def get_yungching_profile() -> MappingProfile:
                                 "land_ping": [ExtractFloat()],
                                 "unit_price": [ExtractFloat()],
                                 "unit_price_fallback": [ExtractFloat()],
-                                "age": [ParseAge()]
-                            }
+                                "age": [ParseAge()],
+                                "parking_type": [TakeFirstLine()]
+                            },
+                            keep_newlines=True
                         )
                     ]
                 )

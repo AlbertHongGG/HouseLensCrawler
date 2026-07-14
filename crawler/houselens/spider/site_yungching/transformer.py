@@ -59,17 +59,7 @@ class SpiderYungchingTransformer(ITransformer):
         parking_type = ""
         parking_text = str(raw_data.get('parking_type') or "")
         if parking_text:
-            if "車位" in parking_text and "數量" not in parking_text: # Filter out label
-                if "坡道平面" in parking_text:
-                    parking_type = "坡道平面"
-                elif "機械" in parking_text:
-                    parking_type = "機械"
-                elif "坡道機械" in parking_text:
-                    parking_type = "坡道機械"
-                elif "塔式車位" in parking_text:
-                    parking_type = "塔式車位"
-                else:
-                    parking_type = parking_text.replace("車位", "").strip()
+            parking_type = parking_text.strip()
 
         management_fee = str(raw_data.get('management_fee') or "")
         if "管理費" in management_fee:
