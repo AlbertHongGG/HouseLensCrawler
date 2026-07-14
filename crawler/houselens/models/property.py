@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import Optional
+from typing import Optional, List
 from enum import Enum
 
 class BuildingType(str, Enum):
@@ -70,6 +70,7 @@ class StandardProperty(BaseModel):
     orientation: Optional[str] = None           # 座向/朝向
     latitude: Optional[float] = None            # 緯度
     longitude: Optional[float] = None           # 經度
+    image_urls: List[str] = Field(default_factory=list, description="物件圖片網址列表")
 
     @model_validator(mode='after')
     def standardize_building_type(self) -> 'StandardProperty':

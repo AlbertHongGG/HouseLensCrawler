@@ -103,6 +103,12 @@ def get_yungching_profile() -> MappingProfile:
         FieldRule(
             name="parking_type",
             selector=LabelSiblingSelector(["車位"], container_css=".item") # Will extract later in transformer
+        ),
+        FieldRule(
+            name="image_urls",
+            selector=CssSelector('.album-handlers-swiper img, .yc-ng-album img'),
+            extract_attr='src',
+            is_list=True
         )
     ]
     return MappingProfile(rules=rules)

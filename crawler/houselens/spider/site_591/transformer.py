@@ -84,6 +84,7 @@ class Spider591Transformer(ITransformer):
             management_fee=management_fee or None,
             orientation=orientation or None,
             has_tenant=has_tenant,
-            legal_usage=legal_usage or None
+            legal_usage=legal_usage or None,
+            image_urls=[src for src in (raw_data.get('image_urls') or []) if src and "base64" not in src]
         )
         return prop

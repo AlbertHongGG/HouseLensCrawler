@@ -93,6 +93,7 @@ class SpiderSinyiTransformer(ITransformer):
             orientation=orientation or None,
             parking_type=parking_type or None,
             has_parking=has_parking,
-            parking_ping=parking_ping or None
+            parking_ping=parking_ping or None,
+            image_urls=[src if src.startswith("http") else "https:" + src for src in (raw_data.get('image_urls') or []) if src]
         )
         return prop

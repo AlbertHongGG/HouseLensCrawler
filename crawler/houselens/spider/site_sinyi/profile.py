@@ -110,6 +110,12 @@ def get_sinyi_profile() -> MappingProfile:
             name="orientation",
             selector=LabelSiblingSelector(["建物朝向", "落地窗朝向", "朝向"]),
             processors=[ExtractAfterString("朝向")]
+        ),
+        FieldRule(
+            name="image_urls",
+            selector=XPathSelector('//div[contains(@class, "buy-buy-carousel")]//img | //div[contains(@class, "carousel_carousel-thumbnail")]//img', timeout=2),
+            extract_attr='src',
+            is_list=True
         )
     ]
     return MappingProfile(rules=rules)

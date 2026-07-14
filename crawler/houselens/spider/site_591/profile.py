@@ -88,6 +88,12 @@ def get_591_profile() -> MappingProfile:
             name="land_ping",
             selector=LabelSiblingSelector(["土地坪數", "土地(持分)坪數", "土地（持分）坪數"], container_css=".detail-house-item, .house-info-item"),
             processors=[ExtractFloat()]
+        ),
+        FieldRule(
+            name="image_urls",
+            selector=CssSelector('.img-box img, #j_photo_play img, #img_list img'),
+            extract_attr='src',
+            is_list=True
         )
     ]
     return MappingProfile(rules=rules)

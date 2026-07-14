@@ -110,6 +110,7 @@ class SpiderYungchingTransformer(ITransformer):
             has_parking=has_parking,
             parking_type=parking_type or None,
             parking_ping=None,
-            community_name=community_name or None
+            community_name=community_name or None,
+            image_urls=[src for src in (raw_data.get('image_urls') or []) if src and "base64" not in src and "blank" not in src]
         )
         return prop
