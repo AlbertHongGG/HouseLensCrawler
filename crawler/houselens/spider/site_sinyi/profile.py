@@ -41,6 +41,21 @@ def get_sinyi_profile() -> MappingProfile:
                         CssSelector('div[class*="Address"]')
                     ]),
                     processors=[RemoveSpaces()]
+                ),
+                FieldRule(
+                    name="image_urls",
+                    selector=CssSelector("div[class*='thumbnail'] img"),
+                    extract_attr="src",
+                    is_list=True
+                ),
+                FieldRule(
+                    name="community_name",
+                    selector=MultipleSelector([
+                        CssSelector("a[href*='/communitylist/communityinfo/']"),
+                        CssSelector("div[class*='community-btn']")
+                    ]),
+                    processors=[RemoveSpaces()],
+                    default=None
                 )
             ]
         ),
@@ -96,6 +111,7 @@ def get_sinyi_profile() -> MappingProfile:
                             value_processors={
                                 "unit_price": [ExtractFloat()],
                                 "building_ping": [ExtractFloat()],
+                                "indoor_ping": [ExtractFloat()],
                                 "main_building_ping": [ExtractFloat()],
                                 "shared_ping": [ExtractFloat()],
                                 "accessory_ping": [ExtractFloat()],
