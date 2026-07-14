@@ -34,7 +34,7 @@ def get_591_profile() -> MappingProfile:
                         ),
                         FieldRule(
                             name="unit_price",
-                            selector=TextMatchSelector("單價", exact=False),
+                            selector=CssSelector(".info-price-per"),
                             processors=[RegexProcessor(r'([\d.]+)萬/坪'), ExtractFloat()]
                         )
                     ]
@@ -63,25 +63,18 @@ def get_591_profile() -> MappingProfile:
                         )
                     ]
                 ),
-                # 2.3 地址與社區區塊
-                ContainerRule(
-                    name="location_block",
-                    selector=CssSelector(".info-addr-content, .info-floor-right, .detail-info-box-3"),
+                # 2.3 地址與社區區塊 (直接在 main_info_area 範圍內搜尋)
+                ListRule(
+                    name="location_list",
+                    item_selector=CssSelector(".info-addr-content, .info-floor-item"),
                     rules=[
-                        ListRule(
-                            name="location_list",
-                            item_selector=CssSelector(".info-addr-item, .info-floor-item"),
-                            rules=[
-                                KeyValueExtractionRule(
-                                    key_selector=CssSelector(".info-addr-key, .info-floor-key"),
-                                    value_selector=CssSelector(".info-addr-value, .info-floor-value"),
-                                    key_mapping={
-                                        "地址": "address",
-                                        "社區": "community_name",
-                                        "樓層": "floor_info"
-                                    }
-                                )
-                            ]
+                        BlockKeyValueRule(
+                            key_mapping={
+                                "地址": "address",
+                                "社區": "community_name",
+                                "樓層": "floor_info",
+                                "朝向": "orientation"
+                            }
                         )
                     ]
                 )
@@ -102,10 +95,10 @@ def get_591_profile() -> MappingProfile:
             ]
         ),
         
-        # 4. 房屋資料區塊
+        # 4. 房屋資料與坪數說明區塊 (整合)
         ContainerRule(
             name="detail_house_info_block",
-            selector=XPathSelector('//div[contains(@class, "detail-house-box") and .//h3[contains(text(), "房屋資料")]] | //div[@id="new-vue-sale-detail-house"]'),
+            selector=CssSelector('.detail-house, #new-vue-sale-detail-house, .house-info-wrap, section.detail-house'),
             rules=[
                 ListRule(
                     name="house_info_list",
@@ -117,30 +110,14 @@ def get_591_profile() -> MappingProfile:
                                 "帶租約": "has_tenant",
                                 "法定用途": "legal_usage",
                                 "管理費": "management_fee",
-                                "車位": "parking_info"
-                            }
-                        )
-                    ]
-                )
-            ]
-        ),
-        
-        # 5. 坪數說明區塊
-        ContainerRule(
-            name="detail_ping_info_block",
-            selector=XPathSelector('//div[contains(@class, "detail-house-box") and .//h3[contains(text(), "坪數說明")]]'),
-            rules=[
-                ListRule(
-                    name="ping_info_list",
-                    item_selector=CssSelector(".detail-house-item, .house-info-item, .detail-house-content > div"),
-                    rules=[
-                        BlockKeyValueRule(
-                            key_mapping={
+                                "車位": "parking_info",
                                 "主建物": "main_building_ping",
                                 "附屬建物": "accessory_ping",
                                 "共用部分": "shared_ping",
                                 "土地坪數": "land_ping",
-                                "土地持分坪數": "land_ping"
+                                "土地持分坪數": "land_ping",
+                                "土地(持分)坪數": "land_ping",
+                                "土地（持分）坪數": "land_ping"
                             },
                             value_processors={
                                 "main_building_ping": [ExtractFloat()],

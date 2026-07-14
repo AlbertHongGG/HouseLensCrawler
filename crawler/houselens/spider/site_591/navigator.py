@@ -93,10 +93,11 @@ class Spider591Navigator(BaseNavigator):
             detail_tab.wait.eles_loaded('xpath://h1', timeout=5)
             
             t0 = time.time()
-            # 嚴格等待 Vue 將 ${title} 等佔位符替換為實際資料
+            # 嚴格等待 Vue 將佔位符替換為實際資料
             while True:
-                h1 = detail_tab.ele('xpath://h1', timeout=0)
-                if h1 and '${title}' not in h1.text:
+                html = detail_tab.html
+                # Check if placeholders are still present in the DOM
+                if html and ('${title}' not in html and '${item.name}' not in html and '${price}' not in html):
                     break
                 if time.time() - t0 > 5:
                     break
