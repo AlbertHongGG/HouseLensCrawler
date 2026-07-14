@@ -3,6 +3,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+from enum import Enum
+
+class CrawlMode(str, Enum):
+    FULL = "full"
+    TARGETED = "targeted"
+
 class SpiderConfig:
     """
     Holds configuration limits for a specific spider, read from the environment.
@@ -22,7 +28,7 @@ class AppConfig:
     _active_str = os.environ.get("ACTIVE_SPIDERS", "")
     ACTIVE_SPIDERS = [s.strip() for s in _active_str.split(",") if s.strip()]
 
-    CRAWL_MODE = os.environ.get("CRAWL_MODE", "full").lower()
+    CRAWL_MODE = CrawlMode(os.environ.get("CRAWL_MODE", "full").lower())
     TARGET_PLATFORM = os.environ.get("TARGET_PLATFORM", "")
     _target_urls_str = os.environ.get("TARGET_URLS", "")
     TARGET_URLS = [s.strip() for s in _target_urls_str.split(",") if s.strip()]

@@ -26,12 +26,7 @@ class CrawlerEngine:
         def handle_sigint(signum, frame):
             logging.warning("[Engine] Ctrl+C received! Initiating graceful shutdown...")
             self.context.cancel()
-            
-            # 立即強制關閉所有活躍的瀏覽器，避免殭屍行程
-            browser_manager.close_all()
-            
-            logging.warning("[Engine] Shutdown initiated. Waiting for threads to exit...")
-            # 視需求，若不想等執行緒結束可以 sys.exit(0)，但正常來說交給 Executor shutdown() 就好
+            raise KeyboardInterrupt()
             
         signal.signal(signal.SIGINT, handle_sigint)
         signal.signal(signal.SIGTERM, handle_sigint)
@@ -90,11 +85,12 @@ class CrawlerEngine:
             # 預防 Signal Handler 沒攔截到的例外狀況
             logging.warning("[Engine] KeyboardInterrupt caught! Shutting down...")
             self.context.cancel()
-            browser_manager.close_all()
         finally:
             logging.info("[Engine] Cleaning up executor...")
             # 強制關閉 Executor，不等待已排隊但尚未執行的任務 (wait=False 不會 block 卡死)
             executor.shutdown(wait=False, cancel_futures=True)
+            # 確保不管正常結束還是強制結束，都關閉所有殘留的瀏覽器
+            browser_manager.close_all()
 
         logging.info("Crawler engine finished all operations.")
 

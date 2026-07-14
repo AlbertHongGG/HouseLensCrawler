@@ -77,9 +77,16 @@ class BrowserManager:
                 logging.info(f"[BrowserManager] Force closing {count} active browsers...")
                 for browser in self._active_browsers:
                     try:
-                        browser.quit()
+                        pid = browser.process_id
+                        if pid:
+                            import signal
+                            # Windows 支援 signal.SIGTERM 進行強制結束
+                            os.kill(pid, signal.SIGTERM)
+                            logging.debug(f"Killed browser PID: {pid}")
+                        else:
+                            browser.quit()
                     except Exception as e:
-                        logging.debug(f"Error forcefully closing browser: {e}")
+                        logging.debug(f"Error forcefully killing browser: {e}")
                 self._active_browsers.clear()
 
 # Global singleton instance
