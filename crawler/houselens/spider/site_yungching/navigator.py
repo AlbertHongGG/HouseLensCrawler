@@ -57,13 +57,13 @@ class SpiderYungchingNavigator(BaseNavigator):
             detail_tab.wait.eles_loaded('tag:h1', timeout=10)
             
             # 永慶的詳細資訊通常需要點擊才能完全顯示在 DOM 中
-            btn = detail_tab.ele('text:看詳細基本資訊', timeout=5)
+            btn = detail_tab.ele('text:看詳細基本資訊', timeout=1)
             if btn:
                 btn.click()
                 time.sleep(1) # 等待動畫或渲染
                 
             # 確保房屋資料區塊出現
-            detail_tab.wait.eles_loaded('.house-info-detail', timeout=5)
+            detail_tab.wait.eles_loaded('css:.detail-block.basic, .house-detail-info', timeout=2)
             
             detail_tab.scroll.down(500)
             time.sleep(0.5)
