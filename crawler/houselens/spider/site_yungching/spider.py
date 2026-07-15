@@ -61,6 +61,15 @@ class YungchingSpider(BaseSpider):
             self.raw_elements['image_urls'] = gallery_block
 
         # 3. Basic Detail Block (Strictly scoped)
+        # Click the "看詳細基本資訊" button if it exists to expand the section
+        expand_btn = tab.ele('text:看詳細基本資訊', timeout=1)
+        if expand_btn:
+            try:
+                expand_btn.click()
+                time.sleep(0.5)
+            except Exception as e:
+                logging.debug(f"[yungching] Failed to click expand button: {e}")
+
         basic_info_block = tab.ele('css:.detail-block.basic, .house-detail-info:not(.detail-list)', timeout=2)
         if basic_info_block:
             items = basic_info_block.eles('css:.item, li')

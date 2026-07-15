@@ -4,7 +4,7 @@ import signal
 from typing import List
 from ..spider.base import BaseSpider
 from ..config import AppConfig
-from .browser_pool import browser_manager
+from .browser import browser_manager
 from .context import EngineContext, SpiderContext
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - [%(levelname)s] - %(message)s')

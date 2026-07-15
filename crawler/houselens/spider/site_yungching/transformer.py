@@ -83,12 +83,13 @@ class YungchingTransformer(BasePropertyTransformer):
                 return True
         return super().transform_has_parking(raw_data)
 
-    def transform_management_fee(self, raw_data: Dict[str, Any]) -> str:
+    def transform_management_fee(self, raw_data: Dict[str, Any]) -> Optional[str]:
         fee = super().transform_management_fee(raw_data)
-        if "管理費" in fee:
-            fee = fee.split("管理費")[-1].strip()
-        elif "建物管理費" in fee:
-            fee = fee.split("建物管理費")[-1].strip()
+        if fee:
+            if "管理費" in fee:
+                fee = fee.split("管理費")[-1].strip()
+            elif "建物管理費" in fee:
+                fee = fee.split("建物管理費")[-1].strip()
         return fee
 
     def transform_image_urls(self, raw_data: Dict[str, Any]) -> list:
