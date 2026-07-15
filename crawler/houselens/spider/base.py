@@ -1,7 +1,7 @@
 import logging
 import time
 from abc import ABC, abstractmethod
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING, Dict, Any
 
 if TYPE_CHECKING:
     from .components.strategies.interface import ICrawlStrategy
@@ -10,25 +10,19 @@ from ..engine.events import event_bus, Event
 from ..engine.context import SpiderContext
 from ..engine.browser_pool import browser_manager
 from ..engine.dedup import CheckStatus
-from .components.navigators.interface import INavigator
-from .components.transformers.interface import ITransformer
-from .core.rules import MappingProfile, RuleEngine
+from .components.navigators.base import BaseNavigator
+from .components.transformers.base import BasePropertyTransformer
 
 class BaseSpider(ABC):
     """
-    Base Spider class implementing the Template Method pattern.
-    It orchestrates the crawling process using Navigator, RuleEngine, and Transformer components.
+    Base Spider class.
+    Orchestrates extraction using Naked DrissionPage locators and delegates
+    transformation to BasePropertyTransformer.
     """
     def __init__(self, config):
         self.config = config
-        self.navigator: Optional[INavigator] = None
-        self.profile: Optional[MappingProfile] = None
-        self.transformer: Optional[ITransformer] = None
-        
-        # RuleEngine will automatically emit events if we pass a properly bound emitter
-        self.rule_engine = RuleEngine(
-            event_bus_emitter=lambda **kwargs: event_bus.emit(Event.ELEMENTS_LOCATED, **kwargs)
-        )
+        self.navigator: Optional[BaseNavigator] = None
+        self.transformer: Optional[BasePropertyTransformer] = None
 
     @property
     @abstractmethod
@@ -36,34 +30,31 @@ class BaseSpider(ABC):
         """Returns the name of the platform (e.g., '591', 'sinyi', 'yungching')"""
         pass
 
-    def run(self, context: SpiderContext, strategy: 'ICrawlStrategy'):
+    @abstractmethod
+    def extract_source_id(self, url: str) -> Optional[str]:
+        """Extracts the unique source ID from the URL."""
+        pass
+
+    @abstractmethod
+    def extract_raw_data(self, tab: Any, url: str) -> Dict[str, Any]:
         """
-        [Template Method] Executes the crawling pipeline.
-        Subclasses MUST NOT override this method.
+        [Template Method for Implementors]
+        Extract raw strings from the webpage using DrissionPage.
+        Should define block containers and query elements inside those containers.
+        Returns a dictionary of raw strings mapping to StandardProperty fields.
         """
-        if not self.navigator or not self.profile or not self.transformer:
-            logging.error(f"[{self.platform_name}] Spider components (Navigator, Profile, Transformer) are not properly initialized!")
-            return
+        pass
 
-        logging.info(f"[{self.platform_name}] Spider starting...")
-        event_bus.emit(Event.SPIDER_STARTED, platform_name=self.platform_name)
-
-        # 1. 取得瀏覽器
-        browser = browser_manager.get_browser()
-        
-        items_processed = 0
-        try:
-            items_processed = strategy.execute(self, browser, context)
-        finally:
-            logging.info(f"[{self.platform_name}] Spider finished. Processed {items_processed} items.")
-            event_bus.emit(Event.SPIDER_FINISHED, platform_name=self.platform_name)
-
-    def process_detail_url(self, url: str, browser, context: SpiderContext, force_scrape: bool = False) -> bool:
+    def process_detail_url(self, url: str, browser: Any, context: SpiderContext, force_scrape: bool = False) -> bool:
         """
         處理單一物件網址，負責擷取、解析、與廣播事件。
         回傳是否成功處理該物件。
         """
-        source_id = self.transformer.extract_source_id(url)
+        if not self.transformer:
+            logging.error(f"[{self.platform_name}] Transformer is not initialized!")
+            return False
+
+        source_id = self.extract_source_id(url)
         if not source_id:
             return False
 
@@ -82,26 +73,26 @@ class BaseSpider(ABC):
         logging.info(f"[{self.platform_name}] Opening tab for detail {source_id}...")
         detail_tab = None
         try:
-            # [開啟新分頁] 避免在同一個頁面反覆跳轉導致 JS 崩潰與記憶體洩漏
+            # [開啟新分頁]
             detail_tab = browser.new_tab(url)
             
-            # [前置處理] (讓 Navigator 有機會點擊展開按鈕等)
-            if hasattr(self.navigator, 'prepare_detail_page'):
+            # [前置處理]
+            if self.navigator and hasattr(self.navigator, 'prepare_detail_page'):
                 self.navigator.prepare_detail_page(detail_tab)
             
-            # [資料萃取] (Extractor/RuleEngine 層)
-            raw_data = self.rule_engine.execute(
-                self.profile, 
-                detail_tab, 
-                source_id, 
-                self.platform_name
-            )
+            # [原物料擷取]
+            raw_data = self.extract_raw_data(detail_tab, url)
             
-            # [資料轉換] (Transformer 層)
-            prop = self.transformer.transform(raw_data, url, source_id)
+            # 補上必要的 ID 欄位
+            raw_data['source_platform'] = self.platform_name
+            raw_data['source_id'] = source_id
+            raw_data['url'] = url
+            
+            # [資料清洗與轉換]
+            prop = self.transformer.transform(raw_data, url)
             
             if prop:
-                # 廣播事件：資料解析完畢 (供 Storage 存檔)
+                # 廣播事件：資料解析完畢
                 event_bus.emit(Event.ITEM_PARSED, item=prop)
                 logging.info(f"[{self.platform_name}] Parsed detail {source_id}.")
                 return True
@@ -113,7 +104,6 @@ class BaseSpider(ABC):
             logging.error(f"[{self.platform_name}] Error processing {source_id}: {e}", exc_info=True)
             return False
         finally:
-            # [資源釋放] 確保分頁被關閉
             if detail_tab:
                 detail_tab.close()
                 time.sleep(0.5)

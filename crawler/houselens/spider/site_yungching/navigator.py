@@ -1,18 +1,16 @@
 import time
 import logging
-from typing import List
-from DrissionPage import ChromiumPage
+from typing import List, Any
 from ..components.navigators.base import BaseNavigator
 
 class SpiderYungchingNavigator(BaseNavigator):
-    def __init__(self, platform_name: str = "yungching"):
-        super().__init__(platform_name)
+    def __init__(self):
+        super().__init__()
+        self.platform_name = "yungching"
 
-    def load_list_page(self, browser: ChromiumPage, start_url: str, page: int) -> bool:
+    def load_list_page(self, browser: Any, start_url: str, page: int) -> bool:
         list_url = f"{start_url}{page}"
-        if not self.safe_get(browser, list_url):
-            return False
-            
+        browser.get(list_url)
         time.sleep(3) # Wait for Angular
         
         # 關閉「AI找房」的彈出視窗 (如果存在)
@@ -26,7 +24,7 @@ class SpiderYungchingNavigator(BaseNavigator):
             
         return True
 
-    def extract_item_urls(self, browser: ChromiumPage) -> List[str]:
+    def extract_item_urls(self, browser: Any) -> List[str]:
         try:
             # 等待卡片載入，Yungching 新版 Angular 網站使用 a.link 或者是包覆在內的 a 標籤
             # 先等待任意一個物件卡片出現，最多等 5 秒
@@ -46,15 +44,13 @@ class SpiderYungchingNavigator(BaseNavigator):
                     if href not in links:
                         links.append(href)
             
-            import logging
             logging.info(f"[{self.platform_name}] Extracted {len(links)} links using 'tag:a'")
             return links
         except Exception as e:
-            import logging
             logging.error(f"[{self.platform_name}] Error extracting links: {e}")
             return []
 
-    def prepare_detail_page(self, detail_tab: ChromiumPage):
+    def prepare_detail_page(self, detail_tab: Any):
         """[準備] 點擊 '看詳細基本資訊' 以展開規格表，並確保畫面載入"""
         try:
             # 確保標題已出現

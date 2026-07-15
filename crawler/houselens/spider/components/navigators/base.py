@@ -1,34 +1,21 @@
-import logging
-from typing import List
-from DrissionPage import ChromiumPage
+from abc import ABC, abstractmethod
+from typing import List, Any
 
-from .interface import INavigator
+class BaseNavigator(ABC):
+    """
+    Navigator 負責定義在網頁間跳轉與抓取列表連結的介面。
+    支援 CrawlMode.FULL。
+    """
+    @abstractmethod
+    def load_list_page(self, browser: Any, start_url: str, page: int) -> bool:
+        """載入目標列表頁"""
+        pass
 
-class BaseNavigator(INavigator):
-    def __init__(self, platform_name: str):
-        self.platform_name = platform_name
+    @abstractmethod
+    def extract_item_urls(self, browser: Any) -> List[str]:
+        """提取列表頁上的所有物件網址"""
+        pass
 
-    def safe_get(self, browser: ChromiumPage, url: str) -> bool:
-        try:
-            logging.info(f"[{self.platform_name}] Loading page: {url}")
-            browser.get(url)
-            return True
-        except Exception as e:
-            logging.error(f"[{self.platform_name}] Error loading page {url}: {e}")
-            return False
-
-    def wait_and_extract_links(self, browser: ChromiumPage, css_selector: str) -> List[str]:
-        try:
-            browser.wait.eles_loaded(css_selector, timeout=5)
-            items = browser.eles(css_selector, timeout=0)
-            links = []
-            for item in items:
-                a_tag = item.ele('tag:a', timeout=1)
-                if a_tag:
-                    href = a_tag.attr('href')
-                    if href:
-                        links.append(href)
-            return links
-        except Exception as e:
-            logging.error(f"[{self.platform_name}] Error extracting links for selector {css_selector}: {e}")
-            return []
+    def prepare_detail_page(self, detail_tab: Any):
+        """(Optional) 在擷取資料前，對物件詳細頁進行預先操作 (例如：點擊展開按鈕)"""
+        pass

@@ -39,4 +39,7 @@ class SpiderFactory:
 # This ensures decorators are triggered without placing imports inside functions
 for _, module_name, _ in pkgutil.iter_modules([os.path.dirname(__file__)]):
     if module_name != "base" and module_name != "factory":
-        importlib.import_module(f"{__package__}.{module_name}")
+        try:
+            importlib.import_module(f"{__package__}.{module_name}")
+        except Exception as e:
+            logging.warning(f"Failed to auto-load spider module '{module_name}': {e}")

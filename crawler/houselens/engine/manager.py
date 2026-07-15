@@ -37,7 +37,8 @@ class CrawlerEngine:
         # 建立專屬的 SpiderContext
         spider_ctx = SpiderContext(self.context, max_items=spider.config.max_items)
         try:
-            spider.run(spider_ctx, strategy)
+            browser = browser_manager.get_browser()
+            strategy.execute(spider, browser, spider_ctx)
         except Exception as e:
             if spider_ctx.is_cancelled():
                 logging.info(f"[{spider.platform_name}] Spider stopped gracefully due to engine shutdown.")

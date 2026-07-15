@@ -1,107 +1,96 @@
 import re
-from typing import Optional, Dict, Any
-from ..components.transformers.interface import ITransformer
-from ...models.property import StandardProperty
+from typing import Dict, Any, Optional
+from ..components.transformers.base import BasePropertyTransformer, parse_float
+from houselens.models.property import StandardProperty
 from ...utils.parsers import parse_layout, parse_floor
 
-class SpiderYungchingTransformer(ITransformer):
-    def extract_source_id(self, url: str) -> str:
-        return url.split('/')[-1].split('?')[0]
+class YungchingTransformer(BasePropertyTransformer):
+    """
+    Yungching-specific property transformer.
+    Overrides methods where Yungching strings need special cleaning.
+    """
+    def transform_source_platform(self, raw_data: Dict[str, Any]) -> str:
+        return "yungching"
 
-    def transform(self, raw_data: Dict[str, Any], url: str, source_id: str) -> Optional[StandardProperty]:
-        title = raw_data.get('title') or f"永慶房屋 - {source_id}"
-        total_price = float(raw_data.get('total_price') or 0.0)
-        
-        # Unit price priority
-        unit_price = float(raw_data.get('unit_price') or 0.0)
-        if not unit_price:
-            unit_price = float(raw_data.get('unit_price_fallback') or 0.0)
-            
-        address_raw = str(raw_data.get('address') or "").strip()
-        address = address_raw.split('\n')[0].strip() if '\n' in address_raw else address_raw
+    def transform_property_uuid(self, raw_data: Dict[str, Any]) -> str:
+        sid = self.transform_source_id(raw_data)
+        return f"yc_{sid}" if sid else ""
 
-        layout_text = str(raw_data.get('layout') or "")
-        layout_data = parse_layout(layout_text)
+    def transform_title(self, raw_data: Dict[str, Any]) -> str:
+        title = super().transform_title(raw_data)
+        sid = self.transform_source_id(raw_data)
+        return title or f"永慶房屋 - {sid}"
 
-        building_ping = float(raw_data.get('building_ping') or 0.0)
-        main_ping = float(raw_data.get('main_building_ping') or 0.0)
-        shared_ping = float(raw_data.get('shared_ping') or 0.0)
-        accessory_ping = float(raw_data.get('accessory_ping') or 0.0)
-        land_ping = float(raw_data.get('land_ping') or 0.0)
+    def transform_unit_price(self, raw_data: Dict[str, Any]) -> float:
+        # Try unit_price first, fallback to unit_price_fallback
+        up = parse_float(raw_data.get('unit_price'))
+        if up <= 0:
+            up = parse_float(raw_data.get('unit_price_fallback'))
+        if up <= 0:
+            tp = self.transform_total_price(raw_data)
+            bp = self.transform_building_ping(raw_data)
+            if tp > 0 and bp > 0:
+                up = round(tp / bp, 2)
+        return up
 
-        # Fallback unit price
-        if unit_price == 0.0 and total_price > 0 and building_ping > 0:
-            unit_price = round(total_price / building_ping, 2)
+    def transform_address(self, raw_data: Dict[str, Any]) -> str:
+        addr = str(raw_data.get('address', '')).strip()
+        # "104台北市中山區南京東路三段\n看地圖" -> remove "看地圖"
+        if '\n' in addr:
+            addr = addr.split('\n')[0].strip()
+        return addr
 
-        age = float(raw_data.get('age') or 0.0)
-        floor, total_floor = parse_floor(str(raw_data.get('floor_info') or ""))
+    def transform_rooms(self, raw_data: Dict[str, Any]) -> int:
+        layout_text = str(raw_data.get('layout', ''))
+        return parse_layout(layout_text).get('rooms', 0)
 
-        raw_building_type = str(raw_data.get('raw_building_type') or "")
-        if not raw_building_type:
-            # Fallback to extract from layout string
+    def transform_living_rooms(self, raw_data: Dict[str, Any]) -> int:
+        layout_text = str(raw_data.get('layout', ''))
+        return parse_layout(layout_text).get('living_rooms', 0)
+
+    def transform_bathrooms(self, raw_data: Dict[str, Any]) -> int:
+        layout_text = str(raw_data.get('layout', ''))
+        return parse_layout(layout_text).get('bathrooms', 0)
+
+    def transform_floor(self, raw_data: Dict[str, Any]) -> str:
+        floor_info = str(raw_data.get('floor_info', ''))
+        f, _ = parse_floor(floor_info)
+        return f
+
+    def transform_total_floor(self, raw_data: Dict[str, Any]) -> str:
+        floor_info = str(raw_data.get('floor_info', ''))
+        _, tf = parse_floor(floor_info)
+        return tf
+
+    def transform_raw_building_type(self, raw_data: Dict[str, Any]) -> str:
+        val = super().transform_raw_building_type(raw_data)
+        if not val:
+            layout_text = str(raw_data.get('layout', ''))
             if "型態" in layout_text:
-                raw_building_type = layout_text.split("型態")[-1].strip()
+                val = layout_text.split("型態")[-1].strip()
+        return val
 
-        legal_usage = str(raw_data.get('legal_usage') or "")
-        land_zoning = str(raw_data.get('land_zoning') or "")
+    def transform_community_name(self, raw_data: Dict[str, Any]) -> Optional[str]:
+        val = super().transform_community_name(raw_data)
+        if val and "看更多" in val:
+            val = val.split("看更多")[0].strip()
+        return val
 
-        community_name = str(raw_data.get('community_name') or "")
-        if "看更多" in community_name:
-            community_name = community_name.split("看更多")[0].strip()
-
-        # Parking
-        has_parking = False
-        hp_text = str(raw_data.get('has_parking') or "")
+    def transform_has_parking(self, raw_data: Dict[str, Any]) -> Optional[bool]:
+        hp_text = str(raw_data.get('has_parking', ''))
         if hp_text:
             if "無車位" not in hp_text and "0個車位" not in hp_text and "0.0個車位" not in hp_text:
-                has_parking = True
+                return True
+        return super().transform_has_parking(raw_data)
 
-        parking_type = ""
-        parking_text = str(raw_data.get('parking_type') or "")
-        if parking_text:
-            parking_type = parking_text.strip()
+    def transform_management_fee(self, raw_data: Dict[str, Any]) -> str:
+        fee = super().transform_management_fee(raw_data)
+        if "管理費" in fee:
+            fee = fee.split("管理費")[-1].strip()
+        elif "建物管理費" in fee:
+            fee = fee.split("建物管理費")[-1].strip()
+        return fee
 
-        management_fee = str(raw_data.get('management_fee') or "")
-        if "管理費" in management_fee:
-            management_fee = management_fee.split("管理費")[-1].strip()
-        elif "建物管理費" in management_fee:
-            management_fee = management_fee.split("建物管理費")[-1].strip()
-
-        orientation = str(raw_data.get('orientation') or "")
-
-        prop = StandardProperty(
-            property_uuid=f"yc_{source_id}",
-            source_platform="yungching",
-            source_id=source_id,
-            title=title,
-            total_price=total_price,
-            unit_price=unit_price,
-            builder=None,
-            management_fee=management_fee or None,
-            orientation=orientation or None,
-            latitude=None,
-            building_ping=building_ping,
-            main_building_ping=main_ping,
-            shared_ping=shared_ping,
-            accessory_ping=accessory_ping,
-            land_ping=land_ping,
-            indoor_ping=round(main_ping + accessory_ping, 2) if main_ping else None,
-            rooms=layout_data.get('rooms'),
-            living_rooms=layout_data.get('living_rooms'),
-            bathrooms=layout_data.get('bathrooms'),
-            age=age,
-            floor=floor,
-            total_floor=total_floor,
-            address=address,
-            url=url,
-            raw_building_type=raw_building_type or None,
-            legal_usage=legal_usage or None,
-            land_zoning=land_zoning or None,
-            has_tenant=None,
-            has_parking=has_parking,
-            parking_type=parking_type or None,
-            parking_ping=None,
-            community_name=community_name or None,
-            image_urls=[src for src in (raw_data.get('image_urls') or []) if src and "base64" not in src and "blank" not in src]
-        )
-        return prop
+    def transform_image_urls(self, raw_data: Dict[str, Any]) -> list:
+        urls = super().transform_image_urls(raw_data)
+        return [src for src in urls if src and "base64" not in src and "blank" not in src]
