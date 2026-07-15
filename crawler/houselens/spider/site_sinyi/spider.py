@@ -96,6 +96,7 @@ class SinyiSpider(BaseSpider):
                 "主建物": "main_building_ping",
                 "共有部份": "shared_ping",
                 "附屬建物": "accessory_ping",
+                "地坪單價": "land_unit_price_fallback",
                 "地坪": "land_ping",
                 "陽台": "balcony_ping",
                 "雨遮": "rain_cover_ping",
@@ -125,7 +126,11 @@ class SinyiSpider(BaseSpider):
                         raw_value = raw_value.replace(':', '').replace('：', '')
                         # Handle trailing equals/plus in formulas like "主建物40.74坪＋"
                         raw_value = raw_value.rstrip('＝＋')
-                        raw_data[target_field] = raw_value
-                        self.raw_elements[target_field] = item
+                        
+                        # Only set if we haven't found a prior match for this target_field (e.g., parking)
+                        if target_field not in raw_data:
+                            raw_data[target_field] = raw_value
+                            self.raw_elements[target_field] = item
+                        break
 
         return raw_data
