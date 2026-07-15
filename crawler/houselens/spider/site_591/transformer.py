@@ -89,5 +89,14 @@ class Spider591Transformer(BasePropertyTransformer):
         return super().transform_has_tenant(raw_data)
 
     def transform_indoor_ping(self, raw_data: Dict[str, Any]) -> Optional[float]:
-        # The golden dataset has a bug where indoor_ping was None for 591. We match it here.
+        val = raw_data.get('indoor_ping')
+        if val:
+            parsed = parse_float(val)
+            if parsed > 0:
+                return parsed
+        
+        main = self.transform_main_building_ping(raw_data) or 0.0
+        acc = self.transform_accessory_ping(raw_data) or 0.0
+        if main > 0 or acc > 0:
+            return round(main + acc, 2)
         return None

@@ -103,11 +103,12 @@ class YungchingSpider(BaseSpider):
                     
                     for mapped_key_name, target_field in key_mapping.items():
                         if mapped_key_name in key_text:
-                            raw_data[target_field] = val_text
-                            self.raw_elements[target_field] = item
-                            
-                            if target_field == "parking_type" and '\n' in val_text:
-                                raw_data[target_field] = val_text.split('\n')[0]
+                            if target_field not in raw_data:
+                                raw_data[target_field] = val_text
+                                self.raw_elements[target_field] = item
+                                
+                                if target_field == "parking_type" and '\n' in val_text:
+                                    raw_data[target_field] = val_text.split('\n')[0]
                             break
 
         return raw_data
