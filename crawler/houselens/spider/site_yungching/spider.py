@@ -34,22 +34,31 @@ class YungchingSpider(BaseSpider):
         house_info_block = tab.ele('css:div.house-info, .m-house-detail-header, .house-info-name', timeout=3)
         if house_info_block:
             title_ele = house_info_block.ele('css:.case-name, h1, .title', timeout=0)
-            if title_ele: raw_data['title'] = title_ele.text
+            if title_ele:
+                raw_data['title'] = title_ele.text
+                self.raw_elements['title'] = title_ele
 
             price_ele = house_info_block.ele('css:.price-wrapper .price, .price-num, .price-info', timeout=0)
-            if price_ele: raw_data['total_price'] = price_ele.text
+            if price_ele:
+                raw_data['total_price'] = price_ele.text
+                self.raw_elements['total_price'] = price_ele
 
             addr_ele = house_info_block.ele('css:.address-text', timeout=0) or house_info_block.ele('css:.address, .house-address', timeout=0)
-            if addr_ele: raw_data['address'] = addr_ele.text
+            if addr_ele:
+                raw_data['address'] = addr_ele.text
+                self.raw_elements['address'] = addr_ele
 
             community_ele = house_info_block.ele('css:a.community, .community-name', timeout=0)
-            if community_ele: raw_data['community_name'] = community_ele.text
+            if community_ele:
+                raw_data['community_name'] = community_ele.text
+                self.raw_elements['community_name'] = community_ele
 
         # 2. Image Gallery Block
         gallery_block = tab.ele('css:.house-album, .album-handlers-swiper, .yc-ng-album, .slick-track, .house-photo', timeout=1)
         if gallery_block:
             imgs = gallery_block.eles('tag:img')
             raw_data['image_urls'] = [img.attr('src') for img in imgs if img.attr('src')]
+            self.raw_elements['image_urls'] = gallery_block
 
         # 3. Basic Detail Block (Strictly scoped)
         basic_info_block = tab.ele('css:.detail-block.basic, .house-detail-info:not(.detail-list)', timeout=2)
@@ -86,6 +95,7 @@ class YungchingSpider(BaseSpider):
                     for mapped_key_name, target_field in key_mapping.items():
                         if mapped_key_name in key_text:
                             raw_data[target_field] = val_text
+                            self.raw_elements[target_field] = item
                             
                             if target_field == "parking_type" and '\n' in val_text:
                                 raw_data[target_field] = val_text.split('\n')[0]

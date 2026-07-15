@@ -38,18 +38,26 @@ class SinyiSpider(BaseSpider):
 
         if header_block:
             title_ele = header_block.ele('css:.buy-content-title-name, .title, h1', timeout=0)
-            if title_ele: raw_data['title'] = title_ele.text
+            if title_ele:
+                raw_data['title'] = title_ele.text
+                self.raw_elements['title'] = title_ele
 
             price_ele = header_block.ele('css:.buy-content-title-total-price, div[class*="buy_buy-content-title-price-first"], .price', timeout=0)
-            if price_ele: raw_data['total_price'] = price_ele.text
+            if price_ele:
+                raw_data['total_price'] = price_ele.text
+                self.raw_elements['total_price'] = price_ele
 
             addr_ele = header_block.ele('xpath://div[contains(text(), "地址")] | //span[contains(text(), "地址")] | //*[contains(@class, "address")]', timeout=0)
             if not addr_ele:
                 addr_ele = header_block.ele('css:div[class*="Address"]', timeout=0)
-            if addr_ele: raw_data['address'] = addr_ele.text
+            if addr_ele:
+                raw_data['address'] = addr_ele.text
+                self.raw_elements['address'] = addr_ele
 
             community_ele = header_block.ele('css:a[href*="/communitylist/communityinfo/"], div[class*="community-btn"]', timeout=0)
-            if community_ele: raw_data['community_name'] = community_ele.text
+            if community_ele:
+                raw_data['community_name'] = community_ele.text
+                self.raw_elements['community_name'] = community_ele
             
             # thumbnail images
             thumb_imgs = header_block.eles('css:div[class*="thumbnail"] img')
@@ -66,6 +74,7 @@ class SinyiSpider(BaseSpider):
                     raw_data['image_urls'].extend(g_urls)
                 else:
                     raw_data['image_urls'] = g_urls
+                self.raw_elements['image_urls'] = gallery_block
 
         # 3. Basic Information Block
         basic_info_block = tab.ele('css:div[class*="buy_buy-content-basic"], #basic-data, .buy-content-basic, .basic-info-content', timeout=2)
@@ -108,5 +117,6 @@ class SinyiSpider(BaseSpider):
                         raw_value = text.replace(mapped_key_name, '')
                         raw_value = raw_value.replace(':', '').replace('：', '')
                         raw_data[target_field] = raw_value
+                        self.raw_elements[target_field] = item
 
         return raw_data

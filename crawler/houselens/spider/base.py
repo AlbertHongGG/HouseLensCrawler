@@ -23,6 +23,7 @@ class BaseSpider(ABC):
         self.config = config
         self.navigator: Optional[BaseNavigator] = None
         self.transformer: Optional[BasePropertyTransformer] = None
+        self.raw_elements: Dict[str, Any] = {}
 
     @property
     @abstractmethod
@@ -42,6 +43,7 @@ class BaseSpider(ABC):
         Extract raw strings from the webpage using DrissionPage.
         Should define block containers and query elements inside those containers.
         Returns a dictionary of raw strings mapping to StandardProperty fields.
+        Implementors should optionally store elements in `self.raw_elements` for visualization.
         """
         pass
 
@@ -81,8 +83,13 @@ class BaseSpider(ABC):
                 self.navigator.prepare_detail_page(detail_tab)
             
             # [原物料擷取]
+            self.raw_elements.clear()
             raw_data = self.extract_raw_data(detail_tab, url)
             
+            # [視覺化截圖]
+            if self.raw_elements:
+                event_bus.emit(Event.ELEMENTS_LOCATED, tab=detail_tab, elements=self.raw_elements, source_id=source_id, platform_name=self.platform_name)
+
             # 補上必要的 ID 欄位
             raw_data['source_platform'] = self.platform_name
             raw_data['source_id'] = source_id

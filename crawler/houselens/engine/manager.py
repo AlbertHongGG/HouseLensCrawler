@@ -1,8 +1,6 @@
 import logging
 import concurrent.futures
 import signal
-import sys
-import time
 from typing import List
 from ..spider.base import BaseSpider
 from ..config import AppConfig
