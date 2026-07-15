@@ -42,7 +42,7 @@ class SinyiSpider(BaseSpider):
                 raw_data['title'] = title_ele.text
                 self.raw_elements['title'] = title_ele
 
-            price_ele = header_block.ele('css:.buy-content-title-total-price, div[class*="buy_buy-content-title-price-first"], .price', timeout=0)
+            price_ele = header_block.ele('css:.buy-content-title-total-price', timeout=0) or header_block.ele('css:div[class*="buy_buy-content-title-price-first"], .price', timeout=0)
             if price_ele:
                 raw_data['total_price'] = price_ele.text
                 self.raw_elements['total_price'] = price_ele
@@ -59,22 +59,30 @@ class SinyiSpider(BaseSpider):
                 raw_data['community_name'] = community_ele.text
                 self.raw_elements['community_name'] = community_ele
             
-            # thumbnail images
-            thumb_imgs = header_block.eles('css:div[class*="thumbnail"] img')
-            if thumb_imgs:
-                raw_data['image_urls'] = [img.attr('src') for img in thumb_imgs if img.attr('src')]
-
-        # 2. Image Gallery Block (overwrite image_urls if found)
-        gallery_block = tab.ele('css:div[class*="buy_buy-content-carousel"], .buy-buy-carousel, .carousel_carousel-thumbnail, .slick-slider', timeout=1)
+        # 2. Image Gallery Block (Strict container locating rule for Visualizer)
+        gallery_block = tab.ele('css:div[class*="buy_buy-carousel-frame"], div[class*="buy_buy-content-detail-carousel"]', timeout=2)
         if gallery_block:
             imgs = gallery_block.eles('tag:img')
-            g_urls = [img.attr('src') for img in imgs if img.attr('src')]
+            g_urls = []
+            for img in imgs:
+                src = img.attr('src')
+                # Filter out ui icons, keep only actual property photos
+                if src and ('bigimg' in src or 'smallimg' in src or '3dvr' in src) and src not in g_urls:
+                    g_urls.append(src)
+            
             if g_urls:
-                if 'image_urls' in raw_data:
-                    raw_data['image_urls'].extend(g_urls)
-                else:
-                    raw_data['image_urls'] = g_urls
-                self.raw_elements['image_urls'] = gallery_block
+                raw_data['image_urls'] = g_urls
+            
+            # Map the container so the Visualizer can highlight it
+            self.raw_elements['image_urls'] = gallery_block
+            
+        # fallback thumbnail images if gallery failed
+        if not raw_data.get('image_urls'):
+            thumb_imgs = header_block.eles('css:div[class*="thumbnail"] img')
+            if thumb_imgs:
+                urls = [img.attr('src') for img in thumb_imgs if img.attr('src')]
+                if urls:
+                    raw_data['image_urls'] = urls
 
         # 3. Basic Information Block
         basic_info_block = tab.ele('css:div[class*="buy_buy-content-basic"], #basic-data, .buy-content-basic, .basic-info-content', timeout=2)
@@ -85,7 +93,6 @@ class SinyiSpider(BaseSpider):
                 "建坪單價": "unit_price",
                 "建坪": "building_ping",
                 "主+附": "indoor_ping",
-                "主+陽": "indoor_ping",
                 "主建物": "main_building_ping",
                 "共有部份": "shared_ping",
                 "附屬建物": "accessory_ping",
@@ -113,9 +120,11 @@ class SinyiSpider(BaseSpider):
                 text = text.replace(' ', '').replace('\n', '').strip()
                 
                 for mapped_key_name, target_field in key_mapping.items():
-                    if mapped_key_name in text:
-                        raw_value = text.replace(mapped_key_name, '')
+                    if text.startswith(mapped_key_name):
+                        raw_value = text.replace(mapped_key_name, '', 1)
                         raw_value = raw_value.replace(':', '').replace('：', '')
+                        # Handle trailing equals/plus in formulas like "主建物40.74坪＋"
+                        raw_value = raw_value.rstrip('＝＋')
                         raw_data[target_field] = raw_value
                         self.raw_elements[target_field] = item
 

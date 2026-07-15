@@ -46,10 +46,20 @@ class SinyiTransformer(BasePropertyTransformer):
         return acc
 
     def transform_indoor_ping(self, raw_data: Dict[str, Any]) -> Optional[float]:
+        # 1. 優先取 "主+附" (如果有被定位到 indoor_ping)
         indoor = parse_float(raw_data.get('indoor_ping'))
         if indoor > 0:
             return indoor
-        return super().transform_indoor_ping(raw_data)
+            
+        # 2. 如果沒有 "主+附"，則必須：主建物存在，且 (陽台 or 雨遮 存在其一)，才進行計算
+        main = parse_float(raw_data.get('main_building_ping'))
+        balcony = parse_float(raw_data.get('balcony_ping'))
+        rain = parse_float(raw_data.get('rain_cover_ping'))
+        
+        if main > 0 and (balcony > 0 or rain > 0):
+            return round(main + balcony + rain, 2)
+            
+        return None
 
     def transform_raw_building_type(self, raw_data: Dict[str, Any]) -> Optional[str]:
         rb = super().transform_raw_building_type(raw_data)

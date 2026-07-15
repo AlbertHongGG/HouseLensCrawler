@@ -50,6 +50,7 @@ class BasePropertyTransformer(ABC):
             community_name=self.transform_community_name(raw_data),
             has_parking=self.transform_has_parking(raw_data),
             parking_type=self.transform_parking_type(raw_data),
+            parking_ping=self.transform_parking_ping(raw_data),
             management_fee=self.transform_management_fee(raw_data),
             orientation=self.transform_orientation(raw_data),
             legal_usage=self.transform_legal_usage(raw_data),
@@ -160,6 +161,10 @@ class BasePropertyTransformer(ABC):
     def transform_parking_type(self, raw_data: Dict[str, Any]) -> Optional[str]:
         val = str(raw_data.get('parking_type', '')).strip()
         return val if val else None
+
+    def transform_parking_ping(self, raw_data: Dict[str, Any]) -> Optional[float]:
+        val = raw_data.get('parking_ping')
+        return parse_float(val) if val else None
 
     def transform_management_fee(self, raw_data: Dict[str, Any]) -> Optional[str]:
         val = str(raw_data.get('management_fee', '')).strip()
