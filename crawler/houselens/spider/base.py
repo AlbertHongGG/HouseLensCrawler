@@ -9,7 +9,7 @@ if TYPE_CHECKING:
 from ..engine.events import event_bus, Event
 from ..engine.context import SpiderContext
 from ..engine.browser import browser_manager
-from ..engine.dedup import CheckStatus
+from ..storage.interfaces import CheckStatus
 from .components.navigators.base import BaseNavigator
 from .components.transformers.base import BasePropertyTransformer
 

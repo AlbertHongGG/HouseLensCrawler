@@ -8,6 +8,7 @@ from enum import Enum
 class CrawlMode(str, Enum):
     FULL = "full"
     TARGETED = "targeted"
+    CONSUMER = "consumer"
 
 class SpiderConfig:
     """
@@ -41,4 +42,4 @@ class AppConfig:
     BROWSER_REUSE_INSTANCE = os.environ.get("BROWSER_REUSE_INSTANCE", "True").lower() == "true"
 
     SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
-    SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+    SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")

@@ -2,7 +2,9 @@ from typing import Any
 from .interface import ICrawlStrategy
 from .full import FullCrawlStrategy
 from .targeted import TargetedCrawlStrategy
+from .consumer import ConsumerStrategy
 from ....config import CrawlMode
+from ....storage.provider import StorageProvider
 
 class StrategyFactory:
     """
@@ -18,5 +20,8 @@ class StrategyFactory:
             if not target_urls:
                 raise ValueError("TARGETED mode requires 'target_urls' argument.")
             return TargetedCrawlStrategy(target_urls)
+        elif mode == CrawlMode.CONSUMER:
+            storage = StorageProvider.get_storage()
+            return ConsumerStrategy(queue_storage=storage, **kwargs)
         else:
             raise ValueError(f"Unknown crawl mode: {mode}")

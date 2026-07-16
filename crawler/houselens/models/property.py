@@ -64,6 +64,7 @@ class StandardProperty(BaseModel):
 
     # ====== 選擇性輔助欄位 (Optional & Extra Info) ======
     community_name: Optional[str] = None        # 社區名稱
+    community_url: Optional[str] = None         # 社區頁面網址
     builder: Optional[str] = None               # 建商
     
     management_fee: Optional[str] = Field(default=None, description="管理費 (含單位，e.g. 3600元/月)")

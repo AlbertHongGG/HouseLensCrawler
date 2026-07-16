@@ -9,6 +9,7 @@ class Event(Enum):
     SPIDER_STARTED = "SPIDER_STARTED"           # 爬蟲啟動
     ELEMENTS_LOCATED = "ELEMENTS_LOCATED"       # DOM 元素定位完成 (kwargs: tab, elements, source_id, platform_name)
     ITEM_PARSED = "ITEM_PARSED"                 # 屬性資料解析完成 (kwargs: item)
+    COMMUNITY_PARSED = "COMMUNITY_PARSED"       # 社區資料解析完成 (kwargs: community)
     SPIDER_FINISHED = "SPIDER_FINISHED"         # 爬蟲結束
     DUPLICATE_DETECTED = "DUPLICATE_DETECTED"   # 發現重複物件 (kwargs: platform, source_id, url_a, url_b)
 
