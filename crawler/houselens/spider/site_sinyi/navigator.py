@@ -6,8 +6,16 @@ from ..components.navigators.base import BaseNavigator
 
 class SinyiNavigator(BaseNavigator):
     def load_list_page(self, browser: ChromiumPage, start_url: str, page: int) -> bool:
-        list_url = f"{start_url}{page}"
-        # wait, safe_get is not in BaseNavigator!
+        if page == 1:
+            list_url = start_url
+        else:
+            import re
+            url = start_url.rstrip('/')
+            if re.search(r'/\d+$', url):
+                list_url = re.sub(r'/\d+$', f'/{page}', url)
+            else:
+                list_url = f"{url}/{page}"
+                
         browser.get(list_url)
         time.sleep(2) # 等待列表載入
         browser.wait.eles_loaded('xpath://div[contains(@id, "buyHouseCard_")]', timeout=5)

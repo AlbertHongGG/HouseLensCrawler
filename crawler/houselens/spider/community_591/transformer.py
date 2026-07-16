@@ -1,6 +1,5 @@
 import re
 from typing import Dict, Any, Optional
-from ...models.community import StandardCommunity
 
 from ..components.transformers.community import BaseCommunityTransformer
 

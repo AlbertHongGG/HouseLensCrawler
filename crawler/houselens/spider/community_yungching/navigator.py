@@ -13,7 +13,16 @@ class YungchingCommunityNavigator(BaseNavigator):
 
     def load_list_page(self, browser: ChromiumPage, start_url: str, page: int) -> bool:
         """載入社區列表頁"""
-        list_url = f"{start_url}?page={page}"
+        if page == 1:
+            list_url = start_url
+        else:
+            from urllib.parse import urlparse, parse_qsl, urlencode, urlunparse
+            parsed = urlparse(start_url)
+            query_params = dict(parse_qsl(parsed.query))
+            query_params['pg'] = str(page)
+            new_query = urlencode(query_params)
+            list_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment))
+            
         browser.get(list_url)
         time.sleep(2)
         return True

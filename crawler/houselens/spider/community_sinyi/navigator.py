@@ -13,7 +13,16 @@ class SinyiCommunityNavigator(BaseNavigator):
 
     def load_list_page(self, browser: ChromiumPage, start_url: str, page: int) -> bool:
         """載入社區列表頁"""
-        list_url = f"{start_url}?page={page}"
+        if page == 1:
+            list_url = start_url
+        else:
+            import re
+            url = start_url.rstrip('/')
+            if re.search(r'/\d+$', url):
+                list_url = re.sub(r'/\d+$', f'/{page}', url)
+            else:
+                list_url = f"{url}/{page}"
+                
         browser.get(list_url)
         time.sleep(2)
         return True
