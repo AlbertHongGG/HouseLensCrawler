@@ -2,40 +2,27 @@ import re
 from typing import Dict, Any, Optional
 from ...models.community import StandardCommunity
 
+from ..components.transformers.community import BaseCommunityTransformer
 
-class SinyiCommunityTransformer:
+class SinyiCommunityTransformer(BaseCommunityTransformer):
     """
     Transforms raw scraped data into a StandardCommunity model for Sinyi.
     """
 
-    def transform(self, raw_data: Dict[str, Any]) -> StandardCommunity:
-        source_id = raw_data['source_id']
+    def transform_builder(self, raw_data: Dict[str, Any]) -> Optional[str]:
         specs = raw_data.get('specs', {})
-
-        return StandardCommunity(
-            community_uuid=f"sinyi_{source_id}",
-            source_platform="sinyi",
-            source_id=source_id,
-            url=raw_data['url'],
-            name=raw_data['name'],
-            address=raw_data.get('address'),
-            builder=self._extract_builder(specs),
-            completion_date=None,
-            age=specs.get("屋齡"),
-            total_households=self._parse_households(specs.get("戶數") or specs.get("總戶數")),
-            building_structure=specs.get("主要結構") or specs.get("主結構") or specs.get("建築結構"),
-            land_zoning=specs.get("土地使用分區"),
-            image_url=raw_data.get('image_url')
-        )
-
-    def _extract_builder(self, specs: Dict[str, str]) -> Optional[str]:
         builder = specs.get("建設公司") or specs.get("建商")
         if builder:
             builder = builder.strip()
         return builder if builder else None
 
-    def _parse_households(self, raw_value: Optional[str]) -> Optional[int]:
-        if not raw_value:
-            return None
-        match = re.search(r'\d+', raw_value)
-        return int(match.group()) if match else None
+    def transform_total_households(self, raw_data: Dict[str, Any]) -> Optional[int]:
+        specs = raw_data.get('specs', {})
+        val = specs.get("戶數") or specs.get("總戶數")
+        from ...utils.parsers import parse_int
+        return parse_int(val)
+        
+    def transform_building_structure(self, raw_data: Dict[str, Any]) -> Optional[str]:
+        specs = raw_data.get('specs', {})
+        val = specs.get("主要結構") or specs.get("主結構") or specs.get("建築結構")
+        return str(val).strip() if val else None

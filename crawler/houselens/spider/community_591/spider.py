@@ -25,6 +25,10 @@ class Community591Spider(BaseSpider):
         self.transformer = Community591Transformer()
 
     @property
+    def target_event(self) -> Event:
+        return Event.COMMUNITY_PARSED
+
+    @property
     def platform_name(self) -> str:
         return "591_community"
 

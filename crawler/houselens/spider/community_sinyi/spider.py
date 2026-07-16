@@ -25,6 +25,10 @@ class SinyiCommunitySpider(BaseSpider):
         self.transformer = SinyiCommunityTransformer()
 
     @property
+    def target_event(self) -> Event:
+        return Event.COMMUNITY_PARSED
+
+    @property
     def platform_name(self) -> str:
         return "sinyi_community"
 
@@ -94,62 +98,3 @@ class SinyiCommunitySpider(BaseSpider):
 
         return raw_data
 
-    def process_detail_url(self, url: str, browser: Any, context: SpiderContext, force_scrape: bool = False) -> bool:
-        """
-        處理單一社區詳細頁面。
-        流程：去重 → 開啟分頁 → 導航等待 → 擷取原始資料 → 視覺驗證 → 轉換 → 廣播事件
-        """
-        source_id = self.extract_source_id(url)
-        if not source_id:
-            logging.warning(f"[{self.platform_name}] Cannot extract source_id from: {url}")
-            return False
-
-        # 去重檢查
-        status, original_url = context.register_item(source_id, url)
-        if status == CheckStatus.LIMIT_REACHED:
-            logging.info(f"[{self.platform_name}] {source_id} skipped (Limit Reached).")
-            return False
-        elif status == CheckStatus.DUPLICATE and not force_scrape:
-            logging.info(f"[{self.platform_name}] {source_id} skipped (Duplicate).")
-            event_bus.emit(Event.DUPLICATE_DETECTED,
-                           platform=self.platform_name, source_id=source_id,
-                           url_a=original_url, url_b=url)
-            return False
-
-        logging.info(f"[{self.platform_name}] Opening tab for community {source_id}...")
-        detail_tab = None
-        try:
-            detail_tab = browser.new_tab(url)
-
-            # 導航等待
-            self.navigator.prepare_detail_page(detail_tab)
-
-            # 擷取原始資料
-            self.raw_elements.clear()
-            raw_data = self.extract_raw_data(detail_tab, url)
-
-            # 視覺驗證截圖
-            if self.raw_elements:
-                event_bus.emit(Event.ELEMENTS_LOCATED,
-                               tab=detail_tab, elements=self.raw_elements,
-                               source_id=source_id, platform_name=self.platform_name)
-
-            # 資料轉換
-            if not raw_data.get('name'):
-                logging.warning(f"[{self.platform_name}] Missing community name for {url}")
-                return False
-
-            community = self.transformer.transform(raw_data)
-
-            # 廣播社區資料已解析
-            event_bus.emit(Event.COMMUNITY_PARSED, community=community)
-            logging.info(f"[{self.platform_name}] Parsed community {source_id}: {community.name}")
-            return True
-
-        except Exception as e:
-            logging.error(f"[{self.platform_name}] Error processing {source_id}: {e}", exc_info=True)
-            return False
-        finally:
-            if detail_tab:
-                detail_tab.close()
-                time.sleep(0.5)

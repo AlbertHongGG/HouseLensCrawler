@@ -1,6 +1,6 @@
 import re
 from typing import Dict, Any, Optional
-from ..components.transformers.base import BasePropertyTransformer, parse_float
+from ..components.transformers.property import BasePropertyTransformer, parse_float
 from houselens.models.property import StandardProperty
 from ...utils.parsers import parse_layout, parse_floor
 

@@ -11,19 +11,25 @@ from ..engine.context import SpiderContext
 from ..engine.browser import browser_manager
 from ..storage.interfaces import CheckStatus
 from .components.navigators.base import BaseNavigator
-from .components.transformers.base import BasePropertyTransformer
+from .components.transformers.base import BaseTransformer
 
 class BaseSpider(ABC):
     """
     Base Spider class.
     Orchestrates extraction using Naked DrissionPage locators and delegates
-    transformation to BasePropertyTransformer.
+    transformation to BaseTransformer.
     """
     def __init__(self, config):
         self.config = config
         self.navigator: Optional[BaseNavigator] = None
-        self.transformer: Optional[BasePropertyTransformer] = None
+        self.transformer: Optional[BaseTransformer] = None
         self.raw_elements: Dict[str, Any] = {}
+
+    @property
+    @abstractmethod
+    def target_event(self) -> Event:
+        """Returns the event to emit when parsing is complete (e.g. Event.ITEM_PARSED, Event.COMMUNITY_PARSED)"""
+        pass
 
     @property
     @abstractmethod
@@ -96,11 +102,11 @@ class BaseSpider(ABC):
             raw_data['url'] = url
             
             # [資料清洗與轉換]
-            prop = self.transformer.transform(raw_data, url)
+            prop = self.transformer.transform(raw_data)
             
             if prop:
                 # 廣播事件：資料解析完畢
-                event_bus.emit(Event.ITEM_PARSED, item=prop)
+                event_bus.emit(self.target_event, **{self.target_event.name.split('_')[0].lower(): prop})
                 logging.info(f"[{self.platform_name}] Parsed detail {source_id}.")
                 return True
             else:
