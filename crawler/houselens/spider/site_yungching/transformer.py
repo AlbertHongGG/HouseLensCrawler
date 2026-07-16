@@ -2,7 +2,6 @@ import re
 from typing import Dict, Any, Optional
 from ..components.transformers.property import BasePropertyTransformer, parse_float
 from houselens.models.property import StandardProperty
-from ...utils.parsers import parse_layout, parse_floor
 
 class YungchingTransformer(BasePropertyTransformer):
     """
@@ -23,9 +22,9 @@ class YungchingTransformer(BasePropertyTransformer):
 
     def transform_unit_price(self, raw_data: Dict[str, Any]) -> float:
         # Try unit_price first, fallback to unit_price_fallback
-        up = parse_float(raw_data.get('unit_price'))
+        up = parse_float(raw_data.get('unit_price')) or 0.0
         if up <= 0:
-            up = parse_float(raw_data.get('unit_price_fallback'))
+            up = parse_float(raw_data.get('unit_price_fallback')) or 0.0
         if up <= 0:
             tp = self.transform_total_price(raw_data)
             bp = self.transform_building_ping(raw_data)
@@ -39,28 +38,6 @@ class YungchingTransformer(BasePropertyTransformer):
         if '\n' in addr:
             addr = addr.split('\n')[0].strip()
         return addr
-
-    def transform_rooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_text = str(raw_data.get('layout', ''))
-        return parse_layout(layout_text).get('rooms', 0)
-
-    def transform_living_rooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_text = str(raw_data.get('layout', ''))
-        return parse_layout(layout_text).get('living_rooms', 0)
-
-    def transform_bathrooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_text = str(raw_data.get('layout', ''))
-        return parse_layout(layout_text).get('bathrooms', 0)
-
-    def transform_floor(self, raw_data: Dict[str, Any]) -> str:
-        floor_info = str(raw_data.get('floor_info', ''))
-        f, _ = parse_floor(floor_info)
-        return f
-
-    def transform_total_floor(self, raw_data: Dict[str, Any]) -> str:
-        floor_info = str(raw_data.get('floor_info', ''))
-        _, tf = parse_floor(floor_info)
-        return tf
 
     def transform_raw_building_type(self, raw_data: Dict[str, Any]) -> str:
         val = super().transform_raw_building_type(raw_data)

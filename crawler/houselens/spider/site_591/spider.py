@@ -3,16 +3,21 @@ import logging
 import re
 from typing import Optional, Dict, Any
 from ..base import BaseSpider
+from ...engine.events import Event
 from .navigator import Spider591Navigator
 from .transformer import Spider591Transformer
 from ..factory import SpiderFactory
 
 @SpiderFactory.register("591")
 class Spider591(BaseSpider):
-    def __init__(self, config):
-        super().__init__(config)
+    def __init__(self, config=None, **kwargs):
+        super().__init__(config, **kwargs)
         self.navigator = Spider591Navigator()
         self.transformer = Spider591Transformer()
+
+    @property
+    def target_event(self) -> Event:
+        return Event.ITEM_PARSED
 
     @property
     def platform_name(self) -> str:

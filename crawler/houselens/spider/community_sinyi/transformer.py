@@ -1,8 +1,8 @@
 import re
 from typing import Dict, Any, Optional
-from ...models.community import StandardCommunity
 
 from ..components.transformers.community import BaseCommunityTransformer
+from houselens.utils.parsers import parse_int
 
 class SinyiCommunityTransformer(BaseCommunityTransformer):
     """
@@ -19,7 +19,6 @@ class SinyiCommunityTransformer(BaseCommunityTransformer):
     def transform_total_households(self, raw_data: Dict[str, Any]) -> Optional[int]:
         specs = raw_data.get('specs', {})
         val = specs.get("戶數") or specs.get("總戶數")
-        from ...utils.parsers import parse_int
         return parse_int(val)
         
     def transform_building_structure(self, raw_data: Dict[str, Any]) -> Optional[str]:

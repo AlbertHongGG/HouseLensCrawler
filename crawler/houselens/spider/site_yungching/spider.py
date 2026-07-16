@@ -5,13 +5,18 @@ from ..base import BaseSpider
 from .navigator import SpiderYungchingNavigator
 from .transformer import YungchingTransformer
 from ..factory import SpiderFactory
+from ...engine.events import Event
 
 @SpiderFactory.register("yungching")
 class YungchingSpider(BaseSpider):
-    def __init__(self, config):
-        super().__init__(config)
-        self.navigator = SpiderYungchingNavigator()
+    def __init__(self, config=None, **kwargs):
+        super().__init__(config, **kwargs)
         self.transformer = YungchingTransformer()
+        self.navigator = SpiderYungchingNavigator()
+
+    @property
+    def target_event(self) -> Event:
+        return Event.ITEM_PARSED
 
     @property
     def platform_name(self) -> str:

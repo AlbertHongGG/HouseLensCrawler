@@ -6,13 +6,18 @@ from ..base import BaseSpider
 from .navigator import SinyiNavigator
 from .transformer import SinyiTransformer
 from ..factory import SpiderFactory
+from ...engine.events import Event
 
 @SpiderFactory.register("sinyi")
 class SinyiSpider(BaseSpider):
-    def __init__(self, config):
-        super().__init__(config)
-        self.navigator = SinyiNavigator()
+    def __init__(self, config=None, **kwargs):
+        super().__init__(config, **kwargs)
         self.transformer = SinyiTransformer()
+        self.navigator = SinyiNavigator()
+
+    @property
+    def target_event(self) -> Event:
+        return Event.ITEM_PARSED
 
     @property
     def platform_name(self) -> str:

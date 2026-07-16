@@ -2,7 +2,7 @@ import re
 from typing import Dict, Any, Optional
 from houselens.models.community import StandardCommunity
 from .base import BaseTransformer
-from ...utils.parsers import parse_int, parse_float
+from houselens.utils.parsers import parse_int, parse_float
 
 class BaseCommunityTransformer(BaseTransformer):
     """

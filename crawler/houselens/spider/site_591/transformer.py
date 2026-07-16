@@ -2,7 +2,6 @@ import re
 from typing import Dict, Any, Optional
 from ..components.transformers.property import BasePropertyTransformer, parse_float
 from houselens.models.property import StandardProperty
-from ...utils.parsers import parse_layout, parse_floor
 
 class Spider591Transformer(BasePropertyTransformer):
     def transform_source_platform(self, raw_data: Dict[str, Any]) -> str:
@@ -28,36 +27,6 @@ class Spider591Transformer(BasePropertyTransformer):
             sid = self.transform_source_id(raw_data)
             title = f"591物件 {sid}"
         return title
-
-    def transform_floor(self, raw_data: Dict[str, Any]) -> str:
-        floor_text = str(raw_data.get('floor_info') or "")
-        f, _ = parse_floor(floor_text)
-        return f
-
-    def transform_total_floor(self, raw_data: Dict[str, Any]) -> str:
-        floor_text = str(raw_data.get('floor_info') or "")
-        _, tf = parse_floor(floor_text)
-        return tf
-
-    def transform_rooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('rooms', 0)
-
-    def transform_living_rooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('living_rooms', 0)
-
-    def transform_bathrooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('bathrooms', 0)
-
-    def transform_kitchens(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('kitchens', 0)
-
-    def transform_balconies(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('balconies', 0)
 
     def transform_parking_type(self, raw_data: Dict[str, Any]) -> Optional[str]:
         val = str(raw_data.get('parking_info') or "").strip()

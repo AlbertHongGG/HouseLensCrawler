@@ -2,7 +2,6 @@ import re
 from typing import Dict, Any, Optional
 from ..components.transformers.property import BasePropertyTransformer, parse_float
 from houselens.models.property import StandardProperty
-from ...utils.parsers import parse_layout, parse_floor
 
 class SinyiTransformer(BasePropertyTransformer):
     def transform_source_platform(self, raw_data: Dict[str, Any]) -> str:
@@ -39,22 +38,22 @@ class SinyiTransformer(BasePropertyTransformer):
     def transform_accessory_ping(self, raw_data: Dict[str, Any]) -> Optional[float]:
         acc = super().transform_accessory_ping(raw_data)
         if not acc:
-            balcony = parse_float(raw_data.get('balcony_ping'))
-            rain = parse_float(raw_data.get('rain_cover_ping'))
+            balcony = parse_float(raw_data.get('balcony_ping')) or 0.0
+            rain = parse_float(raw_data.get('rain_cover_ping')) or 0.0
             if balcony > 0 or rain > 0:
                 acc = round(balcony + rain, 2)
         return acc
 
     def transform_indoor_ping(self, raw_data: Dict[str, Any]) -> Optional[float]:
         # 1. 優先取 "主+附" (如果有被定位到 indoor_ping)
-        indoor = parse_float(raw_data.get('indoor_ping'))
+        indoor = parse_float(raw_data.get('indoor_ping')) or 0.0
         if indoor > 0:
             return indoor
             
         # 2. 如果沒有 "主+附"，則必須：主建物存在，且 (陽台 or 雨遮 存在其一)，才進行計算
-        main = parse_float(raw_data.get('main_building_ping'))
-        balcony = parse_float(raw_data.get('balcony_ping'))
-        rain = parse_float(raw_data.get('rain_cover_ping'))
+        main = parse_float(raw_data.get('main_building_ping')) or 0.0
+        balcony = parse_float(raw_data.get('balcony_ping')) or 0.0
+        rain = parse_float(raw_data.get('rain_cover_ping')) or 0.0
         
         if main > 0 and (balcony > 0 or rain > 0):
             return round(main + balcony + rain, 2)
@@ -66,16 +65,6 @@ class SinyiTransformer(BasePropertyTransformer):
         if rb:
             rb = rb.replace('--', '')
         return rb if rb else None
-
-    def transform_floor(self, raw_data: Dict[str, Any]) -> str:
-        floor_text = str(raw_data.get('floor_info') or "")
-        f, _ = parse_floor(floor_text)
-        return f.replace('樓', '').replace('B', '-').strip()
-
-    def transform_total_floor(self, raw_data: Dict[str, Any]) -> str:
-        floor_text = str(raw_data.get('floor_info') or "")
-        _, tf = parse_floor(floor_text)
-        return tf.replace('樓', '').strip()
 
     def transform_parking_type(self, raw_data: Dict[str, Any]) -> Optional[str]:
         pt = super().transform_parking_type(raw_data)
@@ -110,15 +99,3 @@ class SinyiTransformer(BasePropertyTransformer):
     def transform_image_urls(self, raw_data: Dict[str, Any]) -> list:
         urls = super().transform_image_urls(raw_data)
         return [src if src.startswith("http") else "https:" + src for src in urls if src]
-
-    def transform_rooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('rooms', 0)
-
-    def transform_living_rooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('living_rooms', 0)
-
-    def transform_bathrooms(self, raw_data: Dict[str, Any]) -> int:
-        layout_data = parse_layout(str(raw_data.get('layout') or ""))
-        return layout_data.get('bathrooms', 0)

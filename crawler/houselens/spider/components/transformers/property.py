@@ -1,8 +1,8 @@
 import re
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 from houselens.models.property import StandardProperty
 from .base import BaseTransformer
-from ...utils.parsers import parse_float
+from houselens.utils.parsers import parse_float
 
 class BasePropertyTransformer(BaseTransformer):
     """
@@ -103,28 +103,79 @@ class BasePropertyTransformer(BaseTransformer):
         val = str(raw_data.get('raw_building_type', '')).strip()
         return val if val else None
 
+    def _parse_layout_info(self, raw_data: Dict[str, Any]) -> Dict[str, int]:
+        layout = {"rooms": 0, "living_rooms": 0, "bathrooms": 0, "kitchens": 0, "balconies": 0}
+        text = str(raw_data.get('layout') or "")
+        if not text:
+            return layout
+        
+        patterns = {
+            "rooms": r'(\d+)\s*房',
+            "living_rooms": r'(\d+)\s*廳',
+            "bathrooms": r'(\d+)\s*衛',
+            "kitchens": r'(\d+)\s*(?:廚|室)',
+            "balconies": r'(\d+)\s*陽台'
+        }
+        for k, p in patterns.items():
+            m = re.search(p, text)
+            if m:
+                val = m.group(1) if m.group(1) else m.group(2)
+                if val:
+                    layout[k] = int(val)
+        return layout
+
     def transform_rooms(self, raw_data: Dict[str, Any]) -> int:
+        if raw_data.get('layout'):
+            return self._parse_layout_info(raw_data).get('rooms', 0)
         return int(parse_float(raw_data.get('rooms', 0)) or 0)
 
     def transform_living_rooms(self, raw_data: Dict[str, Any]) -> int:
+        if raw_data.get('layout'):
+            return self._parse_layout_info(raw_data).get('living_rooms', 0)
         return int(parse_float(raw_data.get('living_rooms', 0)) or 0)
 
     def transform_bathrooms(self, raw_data: Dict[str, Any]) -> int:
+        if raw_data.get('layout'):
+            return self._parse_layout_info(raw_data).get('bathrooms', 0)
         return int(parse_float(raw_data.get('bathrooms', 0)) or 0)
 
     def transform_kitchens(self, raw_data: Dict[str, Any]) -> int:
+        if raw_data.get('layout'):
+            return self._parse_layout_info(raw_data).get('kitchens', 0)
         return int(parse_float(raw_data.get('kitchens', 0)) or 0)
 
     def transform_balconies(self, raw_data: Dict[str, Any]) -> int:
+        if raw_data.get('layout'):
+            return self._parse_layout_info(raw_data).get('balconies', 0)
         return int(parse_float(raw_data.get('balconies', 0)) or 0)
 
     def transform_age(self, raw_data: Dict[str, Any]) -> float:
         return parse_float(raw_data.get('age')) or 0.0
 
+    def _parse_floor_info(self, raw_data: Dict[str, Any]) -> Tuple[str, str]:
+        floor, total_floors = "", ""
+        text = str(raw_data.get('floor_info') or "")
+        if not text:
+            return floor, total_floors
+        
+        parts = text.split('/')
+        if len(parts) == 2:
+            floor = parts[0].strip()
+            total_floors = parts[1].replace('共', '').strip()
+        else:
+            floor = text.strip()
+        return floor, total_floors
+
     def transform_floor(self, raw_data: Dict[str, Any]) -> str:
+        if raw_data.get('floor_info'):
+            f, _ = self._parse_floor_info(raw_data)
+            return f.replace('樓', '').replace('F', '').replace('B', '-').strip()
         return str(raw_data.get('floor', '')).strip()
 
     def transform_total_floor(self, raw_data: Dict[str, Any]) -> str:
+        if raw_data.get('floor_info'):
+            _, tf = self._parse_floor_info(raw_data)
+            return tf.replace('樓', '').replace('F', '').strip()
         return str(raw_data.get('total_floor', '')).strip()
 
     def transform_address(self, raw_data: Dict[str, Any]) -> str:
