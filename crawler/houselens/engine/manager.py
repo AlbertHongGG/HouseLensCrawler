@@ -14,9 +14,9 @@ class CrawlerEngine:
     CrawlerEngine runs multiple Spiders concurrently.
     It manages the global EngineContext and handles Graceful Shutdown (Ctrl+C).
     """
-    def __init__(self, dedup_storage, max_workers: int = 3):
+    def __init__(self, max_workers: int = 3):
         self.max_workers = max_workers
-        self.context = EngineContext(dedup_storage)
+        self.context = EngineContext()
         self._setup_signal_handlers()
 
     def _setup_signal_handlers(self):

@@ -37,7 +37,7 @@ def main():
     max_workers = AppConfig.ENGINE_MAX_WORKERS
     
     # 2. Init Manager (Task Executor)
-    manager = CrawlerEngine(storage, max_workers=max_workers)
+    manager = CrawlerEngine(max_workers=max_workers)
     
     # 3. Read Strategy configuration from .env
     crawl_mode = AppConfig.CRAWL_MODE

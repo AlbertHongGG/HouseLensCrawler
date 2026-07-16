@@ -2,14 +2,14 @@ import threading
 
 from typing import Tuple
 from ..storage.interfaces import IDedupStorage, CheckStatus
+from ..storage.provider import StorageProvider
 
 class EngineContext:
     """
     Manages the global state and lifecycle of the entire execution engine.
     """
-    def __init__(self, dedup_storage: IDedupStorage):
+    def __init__(self):
         self._shutdown_event = threading.Event()
-        self.dedup_manager = dedup_storage
 
     def cancel(self):
         """Signals all spiders to stop executing."""
@@ -33,6 +33,8 @@ class SpiderContext:
         
         self._lock = threading.Lock()
         self._items_collected = 0
+        
+        self._storage = StorageProvider.get_storage()
 
     def is_cancelled(self) -> bool:
         """Check if the spider should stop running due to engine shutdown."""
@@ -46,7 +48,7 @@ class SpiderContext:
             if self._items_collected >= self._max_items:
                 return CheckStatus.LIMIT_REACHED, ""
             
-            status, original_url = self._engine_context.dedup_manager.check_and_register(
+            status, original_url = self._storage.check_and_register(
                 source_id=source_id, 
                 current_url=url, 
                 entity_type='property', 
