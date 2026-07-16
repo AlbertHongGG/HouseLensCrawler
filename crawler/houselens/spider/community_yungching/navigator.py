@@ -20,7 +20,7 @@ class YungchingCommunityNavigator(BaseNavigator):
 
     def extract_item_urls(self, browser: ChromiumPage) -> List[str]:
         """從列表頁提取社區詳細頁網址"""
-        items = browser.eles('css:a[href*="/building/"]')
+        items = browser.eles('css:ul.l-item-list > li.m-list-item a[href*="/building/"]')
         return [item.attr("href") for item in items if item.attr("href")]
 
     def prepare_detail_page(self, detail_tab: ChromiumPage):
