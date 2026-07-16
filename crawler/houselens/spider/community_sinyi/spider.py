@@ -41,28 +41,35 @@ class SinyiCommunitySpider(BaseSpider):
         raw_data = {}
 
         # ── 1. Header Block: 取得社區名稱 ──
-        header_block = tab.ele('css:h1, div[class*="community_title"]', timeout=5)
+        header_block = tab.ele('css:h1[class*="community_object-text-name"]', timeout=5)
         if header_block:
             raw_data['name'] = header_block.text.strip()
             self.raw_elements['name'] = header_block
 
         # ── 2. Address Block: 取得社區地址 ──
         address = ""
-        addr_block = tab.ele('css:div[class*="Type_Address"], div[class*="address"]', timeout=3)
+        addr_block = tab.ele('css:div[class*="community_object-text-address"]', timeout=3)
         if addr_block:
             address = addr_block.text.strip()
             self.raw_elements['address'] = addr_block
         raw_data['address'] = address
+        # ── 3. Image URL ──
+        # 標示需指向有面積的容器 (div)，改用最外層的 carousel-frame 確保框住整張圖
+        img_container = tab.ele('css:div[class^="community_object-carousel-frame__"]', timeout=3)
+        if img_container:
+            # 圖片網址藏在內層的 active 項目 img 中
+            img_tag = img_container.ele('css:div.active img') or img_container.ele('tag:img')
+            if img_tag:
+                raw_data['image_url'] = img_tag.attr('src')
+            self.raw_elements['image_url'] = img_container
 
         # ── 3. Basic Info Block: 取得社區規格資訊 ──
         specs = {}
         info_block = tab.ele(
-            'css:div[class*="community_basic-info-area"], div[class*="basicInfo"], div[class*="community-info"]',
+            'css:div[class^="community_basic-info-area__"]',
             timeout=5
         )
         if info_block:
-            self.raw_elements['specs'] = info_block
-
             # 在 info_block 容器內尋找 title-content 配對
             titles = info_block.eles('css:div[class*="basic-info-area-title"], div[class*="info-title"], span[class*="title"]')
             contents = info_block.eles('css:div[class*="basic-info-area-content"], div[class*="info-content"], span[class*="content"]')
@@ -72,6 +79,12 @@ class SinyiCommunitySpider(BaseSpider):
                 value = contents[i].text.strip()
                 if label and value:
                     specs[label] = value
+                    
+                    container = titles[i].parent()
+                    if label == '建設公司': self.raw_elements['builder'] = container
+                    elif label == '戶數': self.raw_elements['total_households'] = container
+                    elif label == '屋齡': self.raw_elements['age'] = container
+                    elif label == '主要結構': self.raw_elements['building_structure'] = container
 
         raw_data['specs'] = specs
 

@@ -20,10 +20,12 @@ class SinyiCommunityTransformer:
             name=raw_data['name'],
             address=raw_data.get('address'),
             builder=self._extract_builder(specs),
-            completion_date=specs.get("屋齡"),
-            total_households=self._parse_households(specs.get("總戶數")),
-            building_structure=specs.get("主結構") or specs.get("建築結構"),
+            completion_date=None,
+            age=specs.get("屋齡"),
+            total_households=self._parse_households(specs.get("戶數") or specs.get("總戶數")),
+            building_structure=specs.get("主要結構") or specs.get("主結構") or specs.get("建築結構"),
             land_zoning=specs.get("土地使用分區"),
+            image_url=raw_data.get('image_url')
         )
 
     def _extract_builder(self, specs: Dict[str, str]) -> Optional[str]:

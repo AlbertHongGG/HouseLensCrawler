@@ -41,5 +41,9 @@ class SinyiCommunityNavigator(BaseNavigator):
             for _ in range(5):
                 detail_tab.scroll.down(500)
                 time.sleep(0.3)
+                
+            # 回到最上方，確保後續座標計算與截圖準確
+            detail_tab.scroll.to_top()
+            time.sleep(0.5)
         except Exception as e:
             logging.warning(f"[sinyi_community] Error preparing detail page: {e}")
