@@ -48,10 +48,11 @@ class SpiderContext:
             if self._items_collected >= self._max_items:
                 return CheckStatus.LIMIT_REACHED, ""
             
+            entity_type = 'community' if 'community' in self._platform_name else 'property'
             status, original_url = self._storage.check_and_register(
                 source_id=source_id, 
                 current_url=url, 
-                entity_type='property', 
+                entity_type=entity_type, 
                 source_platform=self._platform_name
             )
             
