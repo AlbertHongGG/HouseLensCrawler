@@ -20,7 +20,8 @@ class Community591Navigator(BaseNavigator):
 
     def extract_item_urls(self, browser: ChromiumPage) -> List[str]:
         """從列表頁提取社區詳細頁網址"""
-        items = browser.eles('css:a[href*="market.591.com.tw/"]')
+        # 依據容器定位：section.list-container div.left-container a.community-card
+        items = browser.eles('css:div.left-container a.community-card')
         return [item.attr("href") for item in items if item.attr("href")]
 
     def prepare_detail_page(self, detail_tab: ChromiumPage):

@@ -18,7 +18,7 @@ class JsonStorage(IStorage):
     Unified local JSON-based storage for Data, Dedup, and Queue.
     """
     def __init__(self):
-        base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../"))
         
         # Data paths
         self.data_filepath = os.path.join(base_dir, AppConfig.JSON_STORAGE_PATH)
