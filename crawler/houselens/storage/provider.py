@@ -13,11 +13,11 @@ class StorageProvider:
     def get_storage(cls) -> IStorage:
         if cls._storage is None:
             if AppConfig.STORAGE_TYPE == "supabase":
-                from .supabase_store import SupabaseStorage
+                from .supabase import SupabaseStorage
                 logging.info("[Provider] Instantiating Supabase Storage")
                 cls._storage = SupabaseStorage()
             else:
-                from .json_store import JsonStorage
+                from .json import JsonStorage
                 logging.info("[Provider] Instantiating JSON Storage")
                 cls._storage = JsonStorage()
         return cls._storage

@@ -1,6 +1,6 @@
 import logging
 from supabase import create_client, Client
-from ..config import AppConfig
+from ...config import AppConfig
 
 class SupabaseClientManager:
     """

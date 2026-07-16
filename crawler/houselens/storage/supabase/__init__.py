@@ -1,8 +1,8 @@
 import logging
 from typing import List, Tuple, Dict, Any
-from .interfaces import IStorage, CheckStatus
-from ..models.property import StandardProperty
-from ..utils.supabase_client import SupabaseClientManager
+from ..interfaces import IStorage, CheckStatus
+from ...models.property import StandardProperty
+from .client import SupabaseClientManager
 class SupabaseStorage(IStorage):
     """
     Storage implementation that saves data directly to Supabase PostgREST API.
