@@ -8,7 +8,7 @@ if TYPE_CHECKING:
 
 class FullCrawlStrategy(ICrawlStrategy):
     """
-    完整爬取策略：負責從起始網址開始，逐頁翻頁並提取列表上的所有物件。
+    完整爬取策略：負責從起始網址開始，逐頁翻頁並提取列表上的所有物件，並同步進行詳細頁爬取。
     """
     def execute(self, spider: 'BaseSpider', browser, context: 'SpiderContext') -> int:
         start_url = spider.config.start_url

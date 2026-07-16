@@ -21,6 +21,9 @@ class SpiderConfig:
         self.max_items = int(os.environ.get(f"{prefix}_MAX_ITEMS", "1000"))
         self.max_pages = int(os.environ.get(f"{prefix}_MAX_PAGES", "10"))
         self.start_url = os.environ.get(f"{prefix}_START_URL", "")
+        
+        target_urls_str = os.environ.get(f"{prefix}_TARGET_URLS", "")
+        self.target_urls = [s.strip() for s in target_urls_str.split(",") if s.strip()]
 
 class AppConfig:
     """
@@ -30,9 +33,6 @@ class AppConfig:
     ACTIVE_SPIDERS = [s.strip() for s in _active_str.split(",") if s.strip()]
 
     CRAWL_MODE = CrawlMode(os.environ.get("CRAWL_MODE", "full").lower())
-    TARGET_PLATFORM = os.environ.get("TARGET_PLATFORM", "")
-    _target_urls_str = os.environ.get("TARGET_URLS", "")
-    TARGET_URLS = [s.strip() for s in _target_urls_str.split(",") if s.strip()]
 
     STORAGE_TYPE = os.environ.get("STORAGE_TYPE", "json").lower()
     JSON_STORAGE_PATH = os.environ.get("JSON_STORAGE_PATH", "data/properties.jsonl")
