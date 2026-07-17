@@ -51,7 +51,7 @@ def main():
             print(f"Testing {platform_name} with URL {url}")
             spider = SpiderFactory.create(platform_name)
             # Since process_detail_url already emits EVENT, we don't need to manually do it
-            spider.process_detail_url(url, browser, context, force_scrape=True)
+            spider.process_detail_url(url, browser, context)
     finally:
         browser.quit()
 

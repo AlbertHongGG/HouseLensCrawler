@@ -52,7 +52,7 @@ class BaseSpider(ABC):
         """
         pass
 
-    def process_detail_url(self, url: str, browser: Any, context: SpiderContext, force_scrape: bool = False) -> bool:
+    def process_detail_url(self, url: str, browser: Any, context: SpiderContext) -> bool:
         """
         處理單一物件網址，負責擷取、解析、與廣播事件。
         回傳是否成功處理該物件。

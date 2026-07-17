@@ -128,7 +128,7 @@ class Community591Spider(BaseSpider):
                 
         return specs
 
-    def process_detail_url(self, url: str, browser: Any, context: SpiderContext, force_scrape: bool = False) -> bool:
+    def process_detail_url(self, url: str, browser: Any, context: SpiderContext) -> bool:
         """
         處理單一社區詳細頁面。
         流程：去重 → 開啟分頁 → 主頁擷取(截圖) → Overview頁擷取(截圖) → 轉換 → 廣播事件

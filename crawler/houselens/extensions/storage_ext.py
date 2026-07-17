@@ -1,4 +1,5 @@
 import logging
+import threading
 from .base import BaseExtension
 from ..engine.events import EventBus, Event
 from ..models.property import StandardProperty
@@ -12,6 +13,7 @@ class StorageExtension(BaseExtension):
     def __init__(self, storage_strategy):
         self.storage_strategy = storage_strategy
         self.bus = None
+        self._lock = threading.Lock()
 
     def setup(self, bus: EventBus):
         self.bus = bus
@@ -22,30 +24,32 @@ class StorageExtension(BaseExtension):
     def on_item_parsed(self, item: StandardProperty, **kwargs):
         """事件處理常式：當 Spider 解析出 StandardProperty 時寫入儲存體"""
         try:
-            # Semantic Deduplication Hook
-            if hasattr(self.storage_strategy, 'find_potential_duplicates'):
-                candidates = self.storage_strategy.find_potential_duplicates(item)
-                if candidates:
-                    best_match, score = RuleBasedScorer.evaluate(item, candidates)
-                    if score >= 90 and best_match:
-                        # 觸發系統事件 (讓 DuplicateLoggerExtension 接手處理紀錄)
-                        self.bus.emit(Event.DUPLICATE_DETECTED, 
-                            platform=item.source_platform, 
-                            source_id=item.source_id, 
-                            url_a=item.url, 
-                            url_b=best_match.url if best_match.url else best_match.property_uuid
-                        )
-                        return
+            with self._lock:
+                # Semantic Deduplication Hook
+                if hasattr(self.storage_strategy, 'find_potential_duplicates'):
+                    candidates = self.storage_strategy.find_potential_duplicates(item)
+                    if candidates:
+                        best_match, score = RuleBasedScorer.evaluate(item, candidates)
+                        if score >= 90 and best_match:
+                            # 觸發系統事件 (讓 DuplicateLoggerExtension 接手處理紀錄)
+                            self.bus.emit(Event.DUPLICATE_DETECTED, 
+                                platform=item.source_platform, 
+                                source_id=item.source_id, 
+                                url_a=item.url, 
+                                url_b=best_match.url if best_match.url else best_match.property_uuid
+                            )
+                            return
 
-            self.storage_strategy.save(item)
-            logging.info(f"[{item.source_platform}] Saved property {item.source_id}.")
+                self.storage_strategy.save(item)
+                logging.info(f"[{item.source_platform}] Saved property {item.source_id}.")
         except Exception as e:
             logging.error(f"[StorageExtension] Failed to process/save item {item.source_id}: {e}")
 
     def on_community_parsed(self, community, **kwargs):
         """事件處理常式：當 Spider 解析出 StandardCommunity 時寫入儲存體"""
         try:
-            self.storage_strategy.save_community(community)
-            logging.info(f"[{community.source_platform}] Saved community {community.source_id}.")
+            with self._lock:
+                self.storage_strategy.save_community(community)
+                logging.info(f"[{community.source_platform}] Saved community {community.source_id}.")
         except Exception as e:
             logging.error(f"[StorageExtension] Failed to save community {community.source_id}: {e}")
