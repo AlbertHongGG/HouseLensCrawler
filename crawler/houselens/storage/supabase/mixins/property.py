@@ -41,16 +41,15 @@ class SupabasePropertyMixin:
             return False
 
     def find_potential_duplicates(self, property_data: StandardProperty) -> List[StandardProperty]:
-        if not property_data.city or not property_data.district or not property_data.street:
+        if not property_data.city or not property_data.district:
             return []
 
         try:
-            # Query properties in the same city, district, street
+            # Query properties in the same city, district
             res = self.client.table('property') \
                 .select('*') \
                 .eq('city', property_data.city) \
                 .eq('district', property_data.district) \
-                .eq('street', property_data.street) \
                 .execute()
 
             if not res.data:

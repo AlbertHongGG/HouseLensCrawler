@@ -27,9 +27,38 @@ class JsonPropertyMixin:
             return False
 
     def find_potential_duplicates(self, property_data: StandardProperty) -> List[StandardProperty]:
-        """
-        JSON storage might not load all properties into memory efficiently.
-        For MVP, we return empty to rely on URL-based or cross-platform memory limits,
-        or just bypass semantic dedup if JSON backend is used without a loaded index.
-        """
-        return []
+        if not property_data.city or not property_data.district:
+            return []
+
+        candidates = []
+        target_ping = property_data.building_ping
+        
+        try:
+            import json
+            with open(self.data_filepath, 'r', encoding='utf-8') as f:
+                for line in f:
+                    # Fast string check before parsing JSON
+                    if property_data.district not in line:
+                        continue
+                        
+                    item = json.loads(line)
+                    if item.get('city') == property_data.city and item.get('district') == property_data.district:
+                        c_ping = item.get('building_ping', 0)
+                        if target_ping > 0 and c_ping > 0:
+                            diff_ratio = abs(c_ping - target_ping) / target_ping
+                            if diff_ratio <= 0.05:
+                                try:
+                                    candidates.append(StandardProperty(**item))
+                                except Exception:
+                                    pass
+                        else:
+                            try:
+                                candidates.append(StandardProperty(**item))
+                            except Exception:
+                                pass
+        except FileNotFoundError:
+            pass
+        except Exception as e:
+            logging.error(f"[JsonStorage] Error in find_potential_duplicates: {e}")
+            
+        return candidates
