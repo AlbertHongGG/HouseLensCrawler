@@ -9,7 +9,6 @@ if TYPE_CHECKING:
 from ..engine.events import event_bus, Event
 from ..engine.context import SpiderContext
 from ..engine.browser import browser_manager
-from ..storage.interfaces import CheckStatus
 from .components.navigators.base import BaseNavigator
 from .components.transformers.base import BaseTransformer
 
@@ -66,19 +65,11 @@ class BaseSpider(ABC):
         if not source_id:
             return False
 
-        status, original_url = context.register_item(source_id, url)
-        if status == CheckStatus.LIMIT_REACHED:
+        if not context.try_acquire_item():
             logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Limit Reached).")
             return False
-        elif status == CheckStatus.DUPLICATE:
-            if not force_scrape:
-                logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Duplicate).")
-                event_bus.emit(Event.DUPLICATE_DETECTED, platform=self.platform_name, source_id=source_id, url_a=original_url, url_b=url)
-                return False
-            else:
-                logging.info(f"[{self.platform_name}] Detail {source_id} is a duplicate, but force_scrape is True. Proceeding.")
-        
-        logging.info(f"[{self.platform_name}] Opening tab for detail {source_id}...")
+            
+        logging.info(f"[{self.platform_name}] Scraping detail {source_id}...")
         detail_tab = None
         try:
             # [開啟新分頁]

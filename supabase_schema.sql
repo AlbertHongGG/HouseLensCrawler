@@ -60,6 +60,9 @@ CREATE TABLE IF NOT EXISTS houselens.property (
     floor VARCHAR(50),
     total_floor VARCHAR(50),
     address VARCHAR(500),
+    city VARCHAR(50),
+    district VARCHAR(50),
+    street VARCHAR(255),
     url TEXT,
     has_parking BOOLEAN,
     parking_type VARCHAR(100),
@@ -75,6 +78,7 @@ CREATE TABLE IF NOT EXISTS houselens.crawler_dedup (
     source_platform VARCHAR(50) NOT NULL,
     source_id VARCHAR(100) NOT NULL,
     entity_type VARCHAR(50) NOT NULL, -- 'property' or 'community'
+    target_property_uuid VARCHAR(255), -- For semantic deduplication mapping
     scraped_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(source_platform, source_id, entity_type)
 );

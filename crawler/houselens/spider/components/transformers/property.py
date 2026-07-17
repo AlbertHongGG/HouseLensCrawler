@@ -36,6 +36,9 @@ class BasePropertyTransformer(BaseTransformer):
             floor=self.transform_floor(raw_data),
             total_floor=self.transform_total_floor(raw_data),
             address=self.transform_address(raw_data),
+            city=self.transform_city(raw_data),
+            district=self.transform_district(raw_data),
+            street=self.transform_street(raw_data),
             community_name=self.transform_community_name(raw_data),
             has_parking=self.transform_has_parking(raw_data),
             parking_type=self.transform_parking_type(raw_data),
@@ -180,6 +183,50 @@ class BasePropertyTransformer(BaseTransformer):
 
     def transform_address(self, raw_data: Dict[str, Any]) -> str:
         return str(raw_data.get('address', '')).strip()
+
+    def _parse_address_details(self, address: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        """
+        Parses a Taiwanese address into city, district, and street.
+        Uses a robust regex pattern.
+        """
+        if not address:
+            return None, None, None
+            
+        # Matches formats like "台北市信義區信義路五段"
+        pattern = r'^(?P<city>[^市縣]+[市縣])?(?P<district>[^市區鄉鎮]+[市區鄉鎮])?(?P<street>[^路街大道段]+[路街大道段]?.*)?$'
+        match = re.search(pattern, address)
+        if match:
+            city = match.group('city')
+            district = match.group('district')
+            street = match.group('street')
+            
+            # Clean up street: we only want the street part, not the number/floor
+            if street:
+                street_pattern = r'^([^路街大道段]+[路街大道段](?:\d+段)?)'
+                s_match = re.search(street_pattern, street)
+                if s_match:
+                    street = s_match.group(1)
+                else:
+                    # If it doesn't match the standard street suffix, keep as is or return None
+                    pass
+            
+            return city, district, street
+        return None, None, None
+
+    def transform_city(self, raw_data: Dict[str, Any]) -> Optional[str]:
+        address = self.transform_address(raw_data)
+        city, _, _ = self._parse_address_details(address)
+        return city
+
+    def transform_district(self, raw_data: Dict[str, Any]) -> Optional[str]:
+        address = self.transform_address(raw_data)
+        _, district, _ = self._parse_address_details(address)
+        return district
+
+    def transform_street(self, raw_data: Dict[str, Any]) -> Optional[str]:
+        address = self.transform_address(raw_data)
+        _, _, street = self._parse_address_details(address)
+        return street
 
     def transform_community_name(self, raw_data: Dict[str, Any]) -> Optional[str]:
         val = str(raw_data.get('community_name', '')).strip()

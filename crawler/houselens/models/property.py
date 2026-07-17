@@ -43,6 +43,9 @@ class StandardProperty(BaseModel):
     
     # 位置與連結
     address: str = Field(..., description="地址")
+    city: Optional[str] = Field(default=None, description="縣市")
+    district: Optional[str] = Field(default=None, description="鄉鎮市區")
+    street: Optional[str] = Field(default=None, description="路段 (含巷弄)")
     url: str = Field(..., description="物件網址")
 
     # ====== 面積明細 (Area Details) ======

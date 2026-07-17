@@ -25,3 +25,11 @@ class JsonPropertyMixin:
         except Exception as e:
             logging.error(f"Error saving multiple to property.jsonl: {e}")
             return False
+
+    def find_potential_duplicates(self, property_data: StandardProperty) -> List[StandardProperty]:
+        """
+        JSON storage might not load all properties into memory efficiently.
+        For MVP, we return empty to rely on URL-based or cross-platform memory limits,
+        or just bypass semantic dedup if JSON backend is used without a loaded index.
+        """
+        return []

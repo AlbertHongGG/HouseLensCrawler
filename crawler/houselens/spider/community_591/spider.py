@@ -7,7 +7,6 @@ from ..base import BaseSpider
 from ..factory import SpiderFactory
 from ...engine.events import event_bus, Event
 from ...engine.context import SpiderContext
-from ...storage.interfaces import CheckStatus
 from .navigator import Community591Navigator
 from .transformer import Community591Transformer
 
@@ -136,22 +135,13 @@ class Community591Spider(BaseSpider):
         """
         source_id = self.extract_source_id(url)
         if not source_id:
-            logging.warning(f"[{self.platform_name}] Cannot extract source_id from: {url}")
             return False
 
-        # 去重檢查
-        status, original_url = context.register_item(source_id, url)
-        if status == CheckStatus.LIMIT_REACHED:
-            logging.info(f"[{self.platform_name}] {source_id} skipped (Limit Reached).")
+        if not context.try_acquire_item():
+            logging.info(f"[{self.platform_name}] Detail {source_id} skipped (Limit Reached).")
             return False
-        elif status == CheckStatus.DUPLICATE and not force_scrape:
-            logging.info(f"[{self.platform_name}] {source_id} skipped (Duplicate).")
-            event_bus.emit(Event.DUPLICATE_DETECTED,
-                           platform=self.platform_name, source_id=source_id,
-                           url_a=original_url, url_b=url)
-            return False
-
-        logging.info(f"[{self.platform_name}] Opening tab for community {source_id}...")
+            
+        logging.info(f"[{self.platform_name}] Scraping detail: {url}")
         detail_tab = None
         try:
             detail_tab = browser.new_tab(url)

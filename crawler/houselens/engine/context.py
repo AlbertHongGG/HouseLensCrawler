@@ -1,7 +1,5 @@
 import threading
-
 from typing import Tuple
-from ..storage.interfaces import IDedupStorage, CheckStatus
 from ..storage.provider import StorageProvider
 
 class EngineContext:
@@ -40,26 +38,16 @@ class SpiderContext:
         """Check if the spider should stop running due to engine shutdown."""
         return self._engine_context.is_cancelled()
 
-    def register_item(self, source_id: str, url: str) -> Tuple[CheckStatus, str]:
+    def try_acquire_item(self) -> bool:
         """
-        Registers an item and checks if we haven't reached the limit or if it's a duplicate.
+        Increments the items collected counter if under the limit.
+        Returns True if the spider should proceed parsing, False if limit reached.
         """
         with self._lock:
             if self._items_collected >= self._max_items:
-                return CheckStatus.LIMIT_REACHED, ""
-            
-            entity_type = 'community' if 'community' in self._platform_name else 'property'
-            status, original_url = self._storage.check_and_register(
-                source_id=source_id, 
-                current_url=url, 
-                entity_type=entity_type, 
-                source_platform=self._platform_name
-            )
-            
-            if status == CheckStatus.NEW:
-                self._items_collected += 1
-                
-            return status, original_url
+                return False
+            self._items_collected += 1
+            return True
 
     def reached_limit(self) -> bool:
         """Check if the spider has reached its max items limit."""

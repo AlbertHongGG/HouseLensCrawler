@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Tuple, Dict, Any, Optional
 from enum import Enum
 from ..models.property import StandardProperty
+from ..models.community import StandardCommunity
 
 class CheckStatus(Enum):
     NEW = "NEW"
@@ -21,20 +22,14 @@ class IDataStorage(ABC):
         pass
 
     @abstractmethod
-    def save_community(self, community_data: Any) -> bool:
+    def save_community(self, community_data: StandardCommunity) -> bool:
         pass
 
-
-class IDedupStorage(ABC):
-    """
-    Abstract Interface for Deduplication tracking.
-    """
     @abstractmethod
-    def check_and_register(self, source_id: str, current_url: str, entity_type: str = 'property', source_platform: str = 'unknown') -> Tuple[CheckStatus, str]:
+    def find_potential_duplicates(self, property_data: StandardProperty) -> List[StandardProperty]:
         """
-        Check if an item exists.
-        If it's new, register it and return (CheckStatus.NEW, current_url).
-        If duplicate, return (CheckStatus.DUPLICATE, original_url).
+        Find potential duplicates in the database using fast SQL retrieval 
+        (e.g., matching city, district, street, floor, ping range).
         """
         pass
 
@@ -58,14 +53,15 @@ class IQueueStorage(ABC):
         pass
 
     @abstractmethod
-    def update_job_status(self, job_id: str, status: str, retry_count: int) -> bool:
+    def update_job_status(self, job_id: str, status: str, result_msg: str = None) -> bool:
         """
-        Update the status of a job (e.g., COMPLETED, FAILED, or PENDING on retry).
+        Update the job status (e.g., 'SUCCESS', 'FAILED').
         """
         pass
 
-class IStorage(IDataStorage, IDedupStorage, IQueueStorage):
+
+class IStorage(IDataStorage, IQueueStorage):
     """
-    Unified Storage Interface combining Data, Dedup, and Queue operations.
+    Unified Storage Interface combining Data and Queue operations.
     """
     pass
