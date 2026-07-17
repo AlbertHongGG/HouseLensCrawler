@@ -182,6 +182,7 @@ class Community591Spider(BaseSpider):
                 logging.warning(f"[{self.platform_name}] Missing community name for {url}")
                 return False
 
+            raw_data['source_platform'] = self.platform_name
             community = self.transformer.transform(raw_data)
 
             # 廣播社區資料已解析
