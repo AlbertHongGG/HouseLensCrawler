@@ -30,6 +30,7 @@ class JsonStorage(JsonPropertyMixin, JsonCommunityMixin, JsonDedupMixin, JsonQue
         self.data_filepath = os.path.join(storage_dir, "property.jsonl")
         self.community_filepath = os.path.join(storage_dir, "community.jsonl")
         self.builder_filepath = os.path.join(storage_dir, "builder.json")
+        self.community_builder_filepath = os.path.join(storage_dir, "community_builders.json")
         self.dedup_filepath = os.path.join(storage_dir, "crawler_dedup.json")
         self.queue_filepath = os.path.join(storage_dir, "crawl_queue.json")
         
@@ -39,21 +40,25 @@ class JsonStorage(JsonPropertyMixin, JsonCommunityMixin, JsonDedupMixin, JsonQue
         
         self._queue = []
         self._builders = []
+        self._community_builders = []
         
         # Locks
         self._dedup_lock = threading.Lock()
         self._queue_lock = threading.Lock()
         self._builder_lock = threading.Lock()
+        self._community_builder_lock = threading.Lock()
         
         _ensure_dir(self.data_filepath)
         _ensure_dir(self.community_filepath)
         _ensure_dir(self.builder_filepath)
+        _ensure_dir(self.community_builder_filepath)
         _ensure_dir(self.dedup_filepath)
         _ensure_dir(self.queue_filepath)
         
         self._load_dedup()
         self._load_queue()
         self._load_builder()
+        self._load_community_builder()
 
     # --- Loading & Saving internal helpers ---
     def _load_builder(self):
@@ -70,6 +75,21 @@ class JsonStorage(JsonPropertyMixin, JsonCommunityMixin, JsonDedupMixin, JsonQue
                 json.dump(self._builders, f, ensure_ascii=False, indent=2)
         except Exception as e:
             logging.error(f"Error saving builder.json: {e}")
+
+    def _load_community_builder(self):
+        if os.path.exists(self.community_builder_filepath):
+            try:
+                with open(self.community_builder_filepath, "r", encoding="utf-8") as f:
+                    self._community_builders = json.load(f)
+            except Exception:
+                self._community_builders = []
+
+    def _save_community_builder(self):
+        try:
+            with open(self.community_builder_filepath, "w", encoding="utf-8") as f:
+                json.dump(self._community_builders, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logging.error(f"Error saving community_builders.json: {e}")
 
     def _load_dedup(self):
         if os.path.exists(self.dedup_filepath):
